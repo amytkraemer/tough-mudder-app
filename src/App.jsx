@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { loadData, saveData } from './lib/storage.js'
 import { buildSchedule } from './lib/schedule.js'
+import { useCloudSync } from './lib/sync.js'
 import Onboarding from './components/Onboarding.jsx'
 import TabBar from './components/TabBar.jsx'
 import Today from './components/Today.jsx'
@@ -15,6 +16,7 @@ export default function App() {
   const [tab, setTab] = useState('today')
   const [showSettings, setShowSettings] = useState(false)
   const today = useMemo(() => new Date(), [])
+  const sync = useCloudSync(data, setData)
 
   // Persist on every change.
   useEffect(() => { saveData(data) }, [data])
@@ -54,6 +56,7 @@ export default function App() {
   if (!data.settings.onboarded) {
     return (
       <Onboarding
+        sync={sync}
         onDone={(settings) => update((d) => {
           d.settings = { ...d.settings, ...settings, onboarded: true, createdAt: new Date().toISOString() }
           return d
@@ -86,6 +89,7 @@ export default function App() {
           data={data}
           update={update}
           schedule={schedule}
+          sync={sync}
           onClose={() => setShowSettings(false)}
         />
       )}

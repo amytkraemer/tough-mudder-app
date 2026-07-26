@@ -2,7 +2,61 @@ import { useState, useRef } from 'react'
 import { RUNNING_BASE, buildSchedule } from '../lib/schedule.js'
 import { downloadBackup, importJSON } from '../lib/storage.js'
 
-export default function Settings({ data, update, onClose }) {
+const STATUS_LABEL = {
+  syncing: { t: 'Syncing…', c: 'var(--blaze)' },
+  synced: { t: 'Synced to cloud', c: 'var(--lichen)' },
+  error: { t: 'Sync error — will retry', c: 'var(--alarm)' },
+  'signed-out': { t: 'Not signed in', c: 'var(--bone-dim)' },
+  disabled: { t: '', c: 'var(--bone-dim)' },
+}
+
+function SyncSection({ sync }) {
+  if (!sync || !sync.enabled) return null
+  const st = STATUS_LABEL[sync.status] || STATUS_LABEL['signed-out']
+  return (
+    <section className="mb-6">
+      <p className="font-cond font-bold uppercase text-[.62rem] tracking-wider text-bone-dim mb-3">Cloud sync</p>
+      {sync.user ? (
+        <div className="rounded border border-line bg-surface p-3">
+          <div className="flex items-center gap-3">
+            {sync.user.photoURL
+              ? <img src={sync.user.photoURL} alt="" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
+              : <div className="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center font-display text-blaze">{(sync.user.displayName || sync.user.email || '?')[0]}</div>}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm truncate">{sync.user.displayName || sync.user.email}</div>
+              <div className="text-[.72rem]" style={{ color: st.c }}>● {st.t}</div>
+            </div>
+          </div>
+          <button onClick={sync.signOut} className="w-full mt-3 py-2.5 rounded border border-line text-bone font-cond font-bold uppercase text-sm tracking-wide">
+            Sign out
+          </button>
+          <p className="text-[.72rem] text-bone-dim mt-2">Your data auto-syncs across every device you sign in on. Each account is private — friends who sign in get their own separate data.</p>
+        </div>
+      ) : (
+        <div className="rounded border border-line bg-surface p-3">
+          <p className="text-[.8rem] text-bone-dim mb-3">Sign in to automatically back up and sync your plan, session marks, and grip log across all your devices. Free, and your data stays private to your account.</p>
+          <button onClick={sync.signIn} className="w-full py-3 rounded bg-bone text-bog font-cond font-bold uppercase tracking-wide flex items-center justify-center gap-2">
+            <GoogleG /> Sign in with Google
+          </button>
+          {sync.status === 'error' && <p className="text-alarm text-sm mt-2">Sign-in failed. Try again.</p>}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function GoogleG() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  )
+}
+
+export default function Settings({ data, update, sync, onClose }) {
   const s = data.settings
   const [raceDate, setRaceDate] = useState(s.raceDate)
   const [daysPerWeek, setDaysPerWeek] = useState(s.daysPerWeek)
@@ -59,6 +113,8 @@ export default function Settings({ data, update, onClose }) {
         </header>
 
         <div className="px-5 py-5">
+          <SyncSection sync={sync} />
+
           {/* schedule inputs */}
           <section className="mb-6">
             <p className="font-cond font-bold uppercase text-[.62rem] tracking-wider text-bone-dim mb-3">Schedule</p>

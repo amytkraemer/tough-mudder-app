@@ -7,7 +7,7 @@ const HATCH = {
     'repeating-linear-gradient(135deg, rgba(242,163,60,.06) 0 2px, transparent 2px 9px)',
 }
 
-export default function Onboarding({ onDone }) {
+export default function Onboarding({ onDone, sync }) {
   const [step, setStep] = useState(0)
   const [raceDate, setRaceDate] = useState(RACE_INFO.defaultDate)
   const [daysPerWeek, setDaysPerWeek] = useState(3)
@@ -42,6 +42,15 @@ export default function Onboarding({ onDone }) {
             <div key={s.key} className={`h-1 flex-1 rounded ${i <= step ? 'bg-blaze' : 'bg-line'}`} />
           ))}
         </div>
+
+        {step === 0 && sync?.enabled && !sync.user && (
+          <button
+            onClick={sync.signIn}
+            className="w-full mb-6 py-3 rounded border border-line text-bone-dim text-sm no-tap-highlight"
+          >
+            Already training on another device? <span className="text-lichen underline">Sign in to restore</span>
+          </button>
+        )}
 
         <h2 className="font-display uppercase text-xl mb-1">{steps[step].title}</h2>
         <div className="h-[2px] w-9 bg-blaze mb-5" />
