@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Exercise Guide: Tough Mudder 5K Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bog:#0E1712;
+  --surface:#17241D;
+  --surface-2:#1F3128;
+  --line:#2F473A;
+  --bone:#E9E5D8;
+  --bone-dim:#9DAA9F;
+  --blaze:#F2A33C;
+  --lichen:#7FA986;
+  --clay:#B5734A;
+  --alarm:#E36B5A;
+  --r:3px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bog); color:var(--bone);
+  font-family:'Barlow',system-ui,sans-serif; font-size:16px; line-height:1.5;
+  padding-bottom:4rem;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 1.1rem}
+
+/* ---------- masthead ---------- */
+header{
+  padding:2.4rem 0 1.4rem;
+  border-bottom:1px solid var(--line);
+  background:
+    repeating-linear-gradient(135deg, rgba(242,163,60,.045) 0 2px, transparent 2px 9px),
+    var(--bog);
+}
+.eyebrow{
+  font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
+  text-transform:uppercase; letter-spacing:.18em; font-size:.7rem;
+  color:var(--blaze); margin:0 0 .5rem;
+}
+h1{
+  font-family:'Archivo Black',sans-serif; font-weight:400;
+  font-size:clamp(1.9rem,7vw,3rem); line-height:.95; margin:0 0 .7rem;
+  letter-spacing:-.02em; text-transform:uppercase;
+}
+h1 em{font-style:normal;color:var(--blaze)}
+.deck{color:var(--bone-dim);font-size:.95rem;max-width:48ch;margin:0}
+
+/* ---------- controls ---------- */
+.controls{
+  position:sticky; top:0; z-index:20;
+  background:rgba(14,23,18,.94);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+  padding:.7rem 0 .6rem;
+}
+.ctrl-label{
+  font-family:'Barlow Semi Condensed',sans-serif;font-weight:600;
+  text-transform:uppercase;letter-spacing:.14em;font-size:.62rem;
+  color:var(--bone-dim);margin:0 0 .4rem;
+}
+.chips{display:flex;gap:.35rem;overflow-x:auto;padding-bottom:.3rem;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:0 0 auto; cursor:pointer;
+  font-family:'Barlow Semi Condensed',sans-serif;font-weight:600;
+  font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;
+  padding:.42rem .72rem; border-radius:var(--r);
+  border:1px solid var(--line); background:transparent; color:var(--bone-dim);
+  transition:background .15s,color .15s,border-color .15s;
+}
+.chip:hover{color:var(--bone);border-color:var(--lichen)}
+.chip[aria-pressed="true"]{background:var(--blaze);border-color:var(--blaze);color:#14100A}
+.chip:focus-visible,.toggle:focus-visible,.watch:focus-visible{outline:2px solid var(--blaze);outline-offset:2px}
+
+.hotel-row{display:flex;align-items:center;gap:.6rem;margin-top:.6rem}
+.toggle{
+  cursor:pointer;border:1px solid var(--line);background:transparent;
+  width:46px;height:25px;border-radius:99px;position:relative;flex:0 0 auto;
+  transition:background .18s,border-color .18s;
+}
+.toggle::after{
+  content:"";position:absolute;top:3px;left:3px;width:17px;height:17px;
+  border-radius:50%;background:var(--bone-dim);transition:transform .18s,background .18s;
+}
+.toggle[aria-pressed="true"]{background:var(--lichen);border-color:var(--lichen)}
+.toggle[aria-pressed="true"]::after{transform:translateX(21px);background:#0E1712}
+.hotel-text{font-size:.85rem;color:var(--bone-dim)}
+.hotel-text b{color:var(--bone);font-weight:600}
+
+/* ---------- groups ---------- */
+.group{margin:2.2rem 0 0}
+.group-head{display:flex;align-items:baseline;gap:.6rem;margin-bottom:.15rem}
+.group h2{
+  font-family:'Archivo Black',sans-serif;font-weight:400;text-transform:uppercase;
+  font-size:1.15rem;letter-spacing:-.01em;margin:0;
+}
+.group-note{color:var(--bone-dim);font-size:.85rem;margin:.25rem 0 1rem}
+.rule{height:2px;background:var(--blaze);width:38px;margin:.5rem 0 .8rem}
+
+/* ---------- cards ---------- */
+.card{
+  background:var(--surface); border:1px solid var(--line);
+  border-left:3px solid var(--spine,var(--lichen));
+  border-radius:var(--r); padding:.95rem 1rem 1rem; margin-bottom:.7rem;
+}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:.8rem}
+.card h3{
+  font-family:'Barlow',sans-serif;font-weight:700;font-size:1.06rem;
+  margin:0 0 .1rem;letter-spacing:-.01em;
+}
+.tags{display:flex;flex-wrap:wrap;gap:.3rem;margin:.35rem 0 .6rem}
+.tag{
+  font-family:'Barlow Semi Condensed',sans-serif;font-weight:600;
+  font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
+  padding:.16rem .4rem;border-radius:2px;
+  background:var(--surface-2);color:var(--bone-dim);
+}
+.tag.grip{background:rgba(242,163,60,.16);color:var(--blaze)}
+.tag.pull{background:rgba(127,169,134,.16);color:var(--lichen)}
+.cues{margin:0;padding:0;list-style:none}
+.cues li{
+  position:relative;padding-left:1.05rem;margin-bottom:.32rem;font-size:.92rem;
+}
+.cues li::before{
+  content:"";position:absolute;left:0;top:.55em;
+  width:5px;height:5px;background:var(--lichen);
+}
+.miss{
+  margin:.7rem 0 0;padding:.5rem .65rem;border-radius:2px;
+  background:rgba(227,107,90,.09);border-left:2px solid var(--alarm);
+  font-size:.86rem;color:#EFD9D4;
+}
+.miss b{color:var(--alarm);font-weight:700;font-family:'Barlow Semi Condensed',sans-serif;
+  text-transform:uppercase;letter-spacing:.09em;font-size:.68rem;display:block;margin-bottom:.1rem}
+.mod{
+  display:none;margin:.7rem 0 0;padding:.5rem .65rem;border-radius:2px;
+  background:rgba(127,169,134,.1);border-left:2px solid var(--lichen);
+  font-size:.86rem;color:#D9E5DB;
+}
+.mod b{color:var(--lichen);font-weight:700;font-family:'Barlow Semi Condensed',sans-serif;
+  text-transform:uppercase;letter-spacing:.09em;font-size:.68rem;display:block;margin-bottom:.1rem}
+body.hotel .mod{display:block}
+.watch{
+  flex:0 0 auto;text-decoration:none;
+  font-family:'Barlow Semi Condensed',sans-serif;font-weight:700;
+  font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--blaze);border:1px solid rgba(242,163,60,.4);
+  padding:.28rem .5rem;border-radius:2px;white-space:nowrap;
+  transition:background .15s,color .15s;
+}
+.watch:hover{background:var(--blaze);color:#14100A}
+
+.empty{display:none;color:var(--bone-dim);font-style:italic;padding:2rem 0}
+footer{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);
+  color:var(--bone-dim);font-size:.82rem}
+footer a{color:var(--lichen)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Tough Mudder 5K &middot; Hugo MN &middot; June 26, 2027</p>
+  <h1>How to do<br><em>every movement</em></h1>
+  <p class="deck">Tap a session to see only what you need. Flip on hotel mode and every exercise swaps to the version that works in a room with no equipment.</p>
+</header>
+</div>
+
+<div class="controls">
+  <div class="wrap">
+    <p class="ctrl-label">Show session</p>
+    <div class="chips" role="group" aria-label="Filter by session">
+      <button class="chip" data-f="all" aria-pressed="true">All</button>
+      <button class="chip" data-f="sA" aria-pressed="false">Strength A</button>
+      <button class="chip" data-f="cA" aria-pressed="false">Circuit A</button>
+      <button class="chip" data-f="sB" aria-pressed="false">Strength B</button>
+      <button class="chip" data-f="cB" aria-pressed="false">Circuit B</button>
+      <button class="chip" data-f="sC" aria-pressed="false">Strength C</button>
+      <button class="chip" data-f="grip" aria-pressed="false">Grip</button>
+      <button class="chip" data-f="backup" aria-pressed="false">Travel backup</button>
+    </div>
+    <div class="hotel-row">
+      <button class="toggle" id="hotelToggle" aria-pressed="false" aria-label="Hotel room mode"></button>
+      <span class="hotel-text"><b>Hotel room mode</b> &middot; no equipment versions</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="content">
+
+<!-- ================= LOWER BODY ================= -->
+<section class="group">
+  <div class="group-head"><h2>Lower body</h2></div>
+  <div class="rule"></div>
+  <p class="group-note">The bog at Hugo is deep suction mud. Your legs pull out of it a few hundred times.</p>
+
+  <article class="card" data-s="sA cA sB cB sC backup" style="--spine:var(--lichen)">
+    <div class="card-top">
+      <div><h3>Bodyweight squat</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=bodyweight+squat+proper+form+beginner">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Legs</span></div>
+    <ul class="cues">
+      <li>Feet shoulder width, toes turned out slightly.</li>
+      <li>Push your hips back first, like sitting into a chair behind you.</li>
+      <li>Go as deep as you can keep your heels flat. Thighs parallel is plenty.</li>
+      <li>Drive through the middle of your foot to stand.</li>
+    </ul>
+    <p class="miss"><b>Most common mistake</b>Heels lifting off the floor. If they lift, you went too deep or you are leaning forward. Shorten the range.</p>
+  </article>
+
+  <article class="card" data-s="sA cA cB backup" style="--spine:var(--lichen)">
+    <div class="card-top">
+      <div><h3>Reverse lunge</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=reverse+lunge+proper+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Legs</span><span class="tag">Balance</span></div>
+    <ul class="cues">
+      <li>Stand tall. Step one foot straight back, about two feet.</li>
+      <li>Lower until your back knee nearly touches the floor.</li>
+      <li>Weight stays mostly on the <em>front</em> leg. Push through the front heel to stand.</li>
+      <li>Alternate legs, or do all reps on one side then switch.</li>
+    </ul>
+    <p class="miss"><b>Most common mistake</b>Stepping back at an angle instead of straight back, which makes you wobble. Step straight.</p>
+  </article>
+
+  <article class="card" data-s="sB sC" style="--spine:var(--lichen)">
+    <div class="card-top">
+      <div><h3>Split squat</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=dumbbell+split+squat+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Legs</span><span class="tag">Strength</span></div>
+    <ul class="cues">
+      <li>A reverse lunge that stays put. Set your feet in the split stance and leave them there for all reps.</li>
+      <li>Straight up and down. Back knee to the floor, then press back up.</li>
+      <li>Hold dumbbells at your sides, or a backpack on your chest.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>Loaded backpack held against your chest, or a suitcase in each hand. Back foot on the floor, not elevated.</p>
+    <p class="miss"><b>Most common mistake</b>Drifting forward over the front foot each rep. Pick a spot on the wall and keep your torso vertical.</p>
+  </article>
+
+  <article class="card" data-s="cA cB backup" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Squat to stand (fast)</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=air+squat+for+conditioning+fast+reps">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Legs</span><span class="tag">Engine</span></div>
+    <ul class="cues">
+      <li>Same as a bodyweight squat, done for speed instead of depth.</li>
+      <li>Full stand at the top, hips all the way open, every rep.</li>
+      <li>Breathe out on the way up. Do not hold your breath.</li>
+    </ul>
+  </article>
+
+  <article class="card" data-s="cB" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Jump squat</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=jump+squat+proper+landing+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Legs</span><span class="tag">Power</span></div>
+    <ul class="cues">
+      <li>Squat to about half depth, then jump.</li>
+      <li>Land quiet and soft, absorbing straight into the next squat.</li>
+      <li>Quality over count. Stop the set when landings get loud.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>If you are above a sleeping guest, skip the jump. Do fast squats with a hard heel drive instead.</p>
+  </article>
+
+  <article class="card" data-s="sA" style="--spine:var(--lichen)">
+    <div class="card-top">
+      <div><h3>Glute bridge</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=glute+bridge+exercise+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Glutes</span><span class="tag">Hips</span></div>
+    <ul class="cues">
+      <li>Lie on your back, knees bent, feet flat and close to your butt.</li>
+      <li>Drive through your heels and lift your hips until your body is a straight line from knee to shoulder.</li>
+      <li>Squeeze hard at the top for one full second. Lower slowly.</li>
+    </ul>
+    <p class="miss"><b>Most common mistake</b>Arching your lower back to get higher. Ribs stay down. The height comes from your glutes, not your spine.</p>
+  </article>
+</section>
+
+<!-- ================= PUSH ================= -->
+<section class="group">
+  <div class="group-head"><h2>Push</h2></div>
+  <div class="rule"></div>
+  <p class="group-note">Getting yourself up off the ground, over and over, covered in mud.</p>
+
+  <article class="card" data-s="sA cA cB backup" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Push-up</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=push+up+proper+form+beginner+progression">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Push</span><span class="tag">Core</span></div>
+    <ul class="cues">
+      <li>Hands slightly wider than shoulders, directly under your chest, not your face.</li>
+      <li>Body is one rigid plank from head to heels. Squeeze your glutes.</li>
+      <li>Elbows track back at about 45 degrees, not flared straight out.</li>
+      <li>Chest to within a fist of the floor, then press up.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>Too hard on the floor? Put your hands on the desk, then the bed, then a chair, then the floor. Elevating your hands is the progression. Do not drop to your knees, elevate instead. It keeps the plank position honest.</p>
+    <p class="miss"><b>Most common mistake</b>Hips sagging or piking up. If your low back aches, your glutes are off.</p>
+  </article>
+
+  <article class="card" data-s="cA cB backup" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Push-up to shoulder tap</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=push+up+with+shoulder+tap+exercise">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Push</span><span class="tag">Core</span><span class="tag">Anti-rotation</span></div>
+    <ul class="cues">
+      <li>Do one push-up. At the top, lift one hand and tap the opposite shoulder.</li>
+      <li>Put it down, push-up, tap with the other hand.</li>
+      <li>The goal is that your hips do <em>not</em> twist when you lift a hand.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>Hands on the bed or desk. Same rules, easier.</p>
+  </article>
+
+  <article class="card" data-s="sB" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Dumbbell floor press</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=dumbbell+floor+press+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Push</span></div>
+    <ul class="cues">
+      <li>Lie on your back on the floor, knees bent, a dumbbell in each hand.</li>
+      <li>Press straight up over your chest, then lower until your upper arms touch the floor.</li>
+      <li>Brief pause on the floor, then press again.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>No dumbbells? Skip it and add a set of push-ups instead.</p>
+  </article>
+</section>
+
+<!-- ================= PULL & GRIP ================= -->
+<section class="group">
+  <div class="group-head"><h2>Pull and grip</h2></div>
+  <div class="rule"></div>
+  <p class="group-note">The section that decides your race. Monkey bars and wall climbs are where people stop.</p>
+
+  <article class="card" data-s="sA sB sC grip" style="--spine:var(--blaze)">
+    <div class="card-top">
+      <div><h3>Dead hang</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=dead+hang+bar+how+to+grip+strength">Watch</a>
+    </div>
+    <div class="tags"><span class="tag grip">Grip</span><span class="tag pull">Shoulders</span></div>
+    <ul class="cues">
+      <li>Grab a bar overhead, hands shoulder width, palms facing away. Thumbs wrapped around.</li>
+      <li>Hang with your arms straight. Feet off the floor or knees bent if the bar is low.</li>
+      <li>Shoulders active, not shrugged into your ears. Pull them slightly down and back.</li>
+      <li>Hold until your grip gives out. Time it. Log it.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>Hotel gym: the pull-up bar, or the frame of a cable machine. On the road with nothing: a sturdy door frame ledge, or skip it that day.</p>
+    <p class="miss"><b>Most common mistake</b>Hanging fully limp with dead shoulders. Keep tension in the shoulder blades.</p>
+  </article>
+
+  <article class="card" data-s="grip" style="--spine:var(--blaze)">
+    <div class="card-top">
+      <div><h3>Towel hang</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=towel+hang+grip+strength+training">Watch</a>
+    </div>
+    <div class="tags"><span class="tag grip">Grip</span><span class="tag grip">Race specific</span></div>
+    <ul class="cues">
+      <li>Drape a towel over the bar. Grip one end in each hand.</li>
+      <li>Hang the same as a dead hang. It will be far harder and much shorter.</li>
+      <li>Start at 10 seconds. This is the closest indoor match to a wet muddy rope.</li>
+    </ul>
+    <p class="miss"><b>Most common mistake</b>Doing it first. Towel hang <em>after</em> your regular hang, or your grip is already gone.</p>
+  </article>
+
+  <article class="card" data-s="sA backup" style="--spine:var(--lichen)">
+    <div class="card-top">
+      <div><h3>Backpack bent-over row</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=bent+over+row+form+beginner">Watch</a>
+    </div>
+    <div class="tags"><span class="tag pull">Pull</span><span class="tag">Back</span></div>
+    <ul class="cues">
+      <li>Load a backpack with books, water bottles, whatever is heavy.</li>
+      <li>Hinge forward at the hips until your torso is about 45 degrees. Flat back, knees soft.</li>
+      <li>Hold a strap in each hand, pull the pack to your belly button. Elbows go back, not out.</li>
+      <li>Squeeze your shoulder blades together at the top. Lower slowly.</li>
+    </ul>
+    <p class="miss"><b>Most common mistake</b>Rounding your back. If you cannot keep it flat, hinge less.</p>
+  </article>
+
+  <article class="card" data-s="sB sC" style="--spine:var(--lichen)">
+    <div class="card-top">
+      <div><h3>Suspension row (or dumbbell row)</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=TRX+inverted+row+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag pull">Pull</span><span class="tag">Back</span></div>
+    <ul class="cues">
+      <li>Anchor the straps over the top of a door and close it. Handle in each hand.</li>
+      <li>Walk your feet forward and lean back so your arms are straight and you are at an angle.</li>
+      <li>Body stays a straight rigid line. Pull your chest to your hands.</li>
+      <li>More lean back equals harder. Walk your feet forward to increase difficulty.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>No straps: single-arm dumbbell row with one knee on the bed. Or a towel looped around a sturdy door handle, feet forward, lean back and pull.</p>
+    <p class="miss"><b>Most common mistake</b>Leading with your chin and letting your hips sag. Chest arrives first, hips stay in line.</p>
+  </article>
+
+  <article class="card" data-s="sC" style="--spine:var(--blaze)">
+    <div class="card-top">
+      <div><h3>Pull-up and negative pull-up</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=negative+pull+up+progression+beginner">Watch</a>
+    </div>
+    <div class="tags"><span class="tag pull">Pull</span><span class="tag grip">Grip</span></div>
+    <ul class="cues">
+      <li><b>Full pull-up:</b> hang, pull until your chin clears the bar, lower under control.</li>
+      <li><b>Negative:</b> jump or step up so your chin starts above the bar, then lower yourself as slowly as you can. Aim for 5 seconds down. This is how you build the full version.</li>
+      <li>Assisted: a resistance band under one foot, or one foot resting on a chair taking some weight.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>Negatives on the hotel gym bar. No bar at all: swap in extra suspension rows or towel rows.</p>
+  </article>
+
+  <article class="card" data-s="sB sC grip" style="--spine:var(--blaze)">
+    <div class="card-top">
+      <div><h3>Farmer carry</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=farmers+carry+dumbbell+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag grip">Grip</span><span class="tag">Core</span><span class="tag">Traps</span></div>
+    <ul class="cues">
+      <li>A heavy weight in each hand, hanging at your sides. Just walk.</li>
+      <li>Stand tall, shoulders back, ribs down. Do not lean.</li>
+      <li>Walk until your grip starts to slip, not until you are out of breath.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>A packed suitcase in each hand, up and down the hallway. Genuinely effective and nobody will think twice about it.</p>
+  </article>
+
+  <article class="card" data-s="grip" style="--spine:var(--blaze)">
+    <div class="card-top">
+      <div><h3>Suitcase hold</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=suitcase+hold+carry+grip+core+exercise">Watch</a>
+    </div>
+    <div class="tags"><span class="tag grip">Grip</span><span class="tag">Anti-lean</span></div>
+    <ul class="cues">
+      <li>One heavy weight, one hand, held at your side. Stand still.</li>
+      <li>Resist leaning toward the weight. Stay perfectly upright.</li>
+      <li>30 seconds each side.</li>
+    </ul>
+  </article>
+
+  <article class="card" data-s="sC" style="--spine:var(--blaze)">
+    <div class="card-top">
+      <div><h3>Chest carry</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=sandbag+bear+hug+carry+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Full body</span><span class="tag">Race specific</span></div>
+    <ul class="cues">
+      <li>Hug a heavy awkward object to your chest and walk. Sandbag, loaded duffel, suitcase.</li>
+      <li>Elbows tucked under the object, chest up, short steps.</li>
+      <li>Trains the Hero Carry obstacle and general mud slogging under load.</li>
+    </ul>
+  </article>
+</section>
+
+<!-- ================= CORE & GROUND ================= -->
+<section class="group">
+  <div class="group-head"><h2>Core and ground work</h2></div>
+  <div class="rule"></div>
+  <p class="group-note">Crawls, mud pits, barbed wire. A lot of this race happens on your belly.</p>
+
+  <article class="card" data-s="sA cA cB backup" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Bear crawl</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=bear+crawl+exercise+proper+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Core</span><span class="tag">Full body</span><span class="tag">Race specific</span></div>
+    <ul class="cues">
+      <li>Hands and toes on the floor, knees bent and hovering about an inch off the ground.</li>
+      <li>Back flat like a table. Move opposite hand and opposite foot together.</li>
+      <li>Small steps. Hips stay low and level, they should not rock side to side.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>No room to travel? Hold the hover position and slowly tap one shoulder with the opposite hand, alternating. Same brutal effect, zero square footage.</p>
+    <p class="miss"><b>Most common mistake</b>Butt in the air. Keep hips at shoulder height or lower.</p>
+  </article>
+
+  <article class="card" data-s="cB" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Low crawl (army crawl)</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=army+low+crawl+technique">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Full body</span><span class="tag">Race specific</span></div>
+    <ul class="cues">
+      <li>Flat on your stomach, as low as you can get. Head turned to one side.</li>
+      <li>Pull with your forearms, push with the inside of the opposite knee.</li>
+      <li>Stay flat. This trains the barbed wire crawls directly.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>10 feet forward, 10 feet back, repeat. A hotel room is exactly long enough.</p>
+  </article>
+
+  <article class="card" data-s="sA backup" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Plank</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=forearm+plank+proper+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Core</span></div>
+    <ul class="cues">
+      <li>Forearms on the floor, elbows under shoulders, toes on the ground.</li>
+      <li>Straight line from head to heels. Squeeze glutes, tuck ribs down.</li>
+      <li>Actively push the floor away so your upper back is not sagging between the shoulder blades.</li>
+    </ul>
+    <p class="miss"><b>Most common mistake</b>Holding a sagging plank for 90 seconds. A hard, correct 30 seconds beats a soft 2 minutes.</p>
+  </article>
+
+  <article class="card" data-s="sB sC" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Hollow hold</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=hollow+body+hold+progression">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Core</span></div>
+    <ul class="cues">
+      <li>Lie on your back. Press your lower back flat into the floor and keep it there the whole time.</li>
+      <li>Lift your shoulders and legs a few inches off the floor. Arms overhead or by your sides.</li>
+      <li>You should look like a shallow banana.</li>
+    </ul>
+    <p class="miss"><b>Most common mistake</b>Lower back lifting off the floor. The second it lifts, bend your knees or raise your legs higher to make it easier.</p>
+  </article>
+
+  <article class="card" data-s="sA" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Dead bug</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=dead+bug+exercise+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Core</span></div>
+    <ul class="cues">
+      <li>On your back, arms straight up at the ceiling, knees bent at 90 degrees over your hips.</li>
+      <li>Slowly lower one arm overhead and the <em>opposite</em> leg toward the floor.</li>
+      <li>Return, then switch sides. Lower back stays glued to the floor throughout.</li>
+    </ul>
+    <p class="miss"><b>Most common mistake</b>Going too far and letting the back arch. Only extend as far as you can hold the floor contact.</p>
+  </article>
+
+  <article class="card" data-s="sA" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Superman</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=superman+exercise+back+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Back</span><span class="tag">Glutes</span></div>
+    <ul class="cues">
+      <li>Face down, arms stretched overhead.</li>
+      <li>Lift arms, chest, and legs off the floor at the same time. Hold one second.</li>
+      <li>Small range. You are not trying to fold in half.</li>
+    </ul>
+  </article>
+
+  <article class="card" data-s="cA cB backup" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Mountain climbers</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=mountain+climbers+exercise+form">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Core</span><span class="tag">Engine</span></div>
+    <ul class="cues">
+      <li>Start in a push-up position, hands under shoulders.</li>
+      <li>Drive one knee toward your chest, then switch, like running in place horizontally.</li>
+      <li>Hips stay low and level. Do not let your butt pop up as you speed up.</li>
+    </ul>
+  </article>
+</section>
+
+<!-- ================= FULL BODY & SKILL ================= -->
+<section class="group">
+  <div class="group-head"><h2>Full body and race skills</h2></div>
+  <div class="rule"></div>
+
+  <article class="card" data-s="cA cB backup" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Burpee (step-back and full)</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=burpee+step+back+beginner+modification">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Full body</span><span class="tag">Engine</span></div>
+    <ul class="cues">
+      <li><b>Step-back version (start here):</b> squat down, hands on floor, step one foot back then the other into a plank. Step them back in. Stand up tall.</li>
+      <li><b>Full version:</b> same, but jump the feet back and in, add a push-up at the bottom and a jump at the top.</li>
+      <li>Every rep finishes with hips fully open and standing tall.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>Step-back, no jump. Quiet, works on carpet, will not annoy the room below.</p>
+    <p class="miss"><b>Most common mistake</b>Rushing into the full version too early and wrecking your low back. Step-backs for all of Phase 1.</p>
+  </article>
+
+  <article class="card" data-s="sC" style="--spine:var(--blaze)">
+    <div class="card-top">
+      <div><h3>Wall get-over</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=obstacle+course+race+wall+climb+technique">Watch</a>
+    </div>
+    <div class="tags"><span class="tag pull">Pull</span><span class="tag">Race specific</span></div>
+    <ul class="cues">
+      <li>Find something waist high and solid. A picnic table, a low retaining wall, a fence rail.</li>
+      <li>Jump and get your chest onto the top edge, then hook a heel over and roll across.</li>
+      <li>The technique is chest first, then hip, then leg. Not a pull-up.</li>
+    </ul>
+    <p class="mod"><b>Hotel version</b>Nothing safe to climb. Substitute 10 burpees with a hard vertical jump at the top.</p>
+    <p class="miss"><b>Most common mistake</b>Trying to muscle straight up with your arms. Use the jump, get your torso over the edge, let the wall hold your weight.</p>
+  </article>
+
+  <article class="card" data-s="sC" style="--spine:var(--clay)">
+    <div class="card-top">
+      <div><h3>Strides</h3></div>
+      <a class="watch" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=running+strides+how+to+do+them">Watch</a>
+    </div>
+    <div class="tags"><span class="tag">Running</span></div>
+    <ul class="cues">
+      <li>After an easy run, do 4 to 6 accelerations of about 20 seconds each.</li>
+      <li>Build smoothly to roughly 85 percent effort, hold a few seconds, ease off. Not a sprint.</li>
+      <li>Walk a full minute between each. They should feel good, not hard.</li>
+    </ul>
+  </article>
+</section>
+
+<!-- ================= BACKUP ================= -->
+<section class="group">
+  <div class="group-head"><h2>The 15 minute travel backup</h2></div>
+  <div class="rule"></div>
+  <p class="group-note">Long flight, bad hotel, no time. Do this and log it as <b>Backup</b> in the tracker. It counts.</p>
+
+  <article class="card" data-s="backup" style="--spine:var(--blaze)">
+    <div class="card-top"><div><h3>The whole session</h3></div></div>
+    <div class="tags"><span class="tag">5 rounds</span><span class="tag">60 sec rest between</span></div>
+    <ul class="cues">
+      <li>10 bodyweight squats</li>
+      <li>10 push-ups (hands on the desk if needed)</li>
+      <li>10 reverse lunges, 5 each leg</li>
+      <li>20 mountain climbers</li>
+      <li>5 burpees, step-back version</li>
+      <li>Finish with a dead hang if there is anything to hang from</li>
+    </ul>
+    <p class="miss"><b>Watch this</b>If backups pass roughly 30 percent of your completed sessions, your strength work has stopped progressing. The dashboard tracks that share for you.</p>
+  </article>
+</section>
+
+<p class="empty" id="empty">Nothing in this session. Pick another filter.</p>
+
+<footer>
+  <p>Every <b>Watch</b> link opens a YouTube search for that movement so you get current results, not one video that might disappear. For a browsable reference, <a href="https://www.muscleandstrength.com/exercises" target="_blank" rel="noopener">muscleandstrength.com/exercises</a> and <a href="https://www.precisionnutrition.com/video-exercise-library" target="_blank" rel="noopener">Precision Nutrition's free library</a> both cover nearly everything here.</p>
+  <p>Form cues written for a beginner with no running base, training three days a week. When something hurts in a joint rather than burning in a muscle, stop that exercise and swap it.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
+  var groups = Array.prototype.slice.call(document.querySelectorAll('.group'));
+  var empty = document.getElementById('empty');
+
+  function apply(f){
+    cards.forEach(function(c){
+      var show = (f === 'all') || (' '+c.dataset.s+' ').indexOf(' '+f+' ') > -1;
+      c.style.display = show ? '' : 'none';
+    });
+    var any = false;
+    groups.forEach(function(g){
+      var vis = g.querySelectorAll('.card:not([style*="display: none"])').length;
+      g.style.display = vis ? '' : 'none';
+      if(vis) any = true;
+    });
+    empty.style.display = any ? 'none' : 'block';
+  }
+
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.setAttribute('aria-pressed','false'); });
+      chip.setAttribute('aria-pressed','true');
+      apply(chip.dataset.f);
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+  });
+
+  var toggle = document.getElementById('hotelToggle');
+  toggle.addEventListener('click', function(){
+    var on = toggle.getAttribute('aria-pressed') === 'true';
+    toggle.setAttribute('aria-pressed', on ? 'false' : 'true');
+    document.body.classList.toggle('hotel', !on);
+  });
+})();
+</script>
+</body>
+</html>
