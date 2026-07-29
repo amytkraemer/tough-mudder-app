@@ -53,6 +53,20 @@ export default function App() {
     })
   }, [update])
 
+  const setLog = useCallback((week, session, patch) => {
+    update((d) => {
+      const key = `${week}:${session}`
+      const cur = d.logs[key] || {}
+      const next = { ...cur, ...patch }
+      if (patch.ex) {
+        next.ex = { ...(cur.ex || {}) }
+        for (const i in patch.ex) next.ex[i] = { ...(cur.ex?.[i] || {}), ...patch.ex[i] }
+      }
+      d.logs[key] = next
+      return d
+    })
+  }, [update])
+
   if (!data.settings.onboarded) {
     return (
       <Onboarding
@@ -73,11 +87,12 @@ export default function App() {
             schedule={schedule}
             data={data}
             setMark={setMark}
+            setLog={setLog}
             onOpenSettings={() => setShowSettings(true)}
             onGoPlan={() => setTab('plan')}
           />
         )}
-        {tab === 'plan' && <Plan schedule={schedule} data={data} setMark={setMark} />}
+        {tab === 'plan' && <Plan schedule={schedule} data={data} setMark={setMark} setLog={setLog} />}
         {tab === 'exercises' && <Exercises data={data} update={update} />}
         {tab === 'grip' && <Grip data={data} update={update} />}
       </div>

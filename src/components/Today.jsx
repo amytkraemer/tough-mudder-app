@@ -8,7 +8,7 @@ const HATCH = {
 }
 const PHASE_ACCENT = { 1: 'var(--lichen)', 2: 'var(--blaze)', 3: 'var(--clay)', 4: 'var(--alarm)' }
 
-export default function Today({ schedule, data, setMark, onOpenSettings, onGoPlan }) {
+export default function Today({ schedule, data, setMark, setLog, onOpenSettings, onGoPlan }) {
   const { weeks, currentIndex, status, daysToRace } = schedule
   const week = weeks[currentIndex]
   const marks = data.marks
@@ -93,9 +93,17 @@ export default function Today({ schedule, data, setMark, onOpenSettings, onGoPla
           ))}
         </div>
 
-        <SessionCard kind="run" week={week} mark={marks[markKey(week.week, 'run')]} onMark={(v) => setMark(week.week, 'run', v)} />
-        <SessionCard kind="strength" week={week} mark={marks[markKey(week.week, 'strength')]} onMark={(v) => setMark(week.week, 'strength', v)} />
-        <SessionCard kind="circuit" week={week} mark={marks[markKey(week.week, 'circuit')]} onMark={(v) => setMark(week.week, 'circuit', v)} />
+        {['run', 'strength', 'circuit'].map((s) => (
+          <SessionCard
+            key={s}
+            kind={s}
+            week={week}
+            mark={marks[markKey(week.week, s)]}
+            onMark={(v) => setMark(week.week, s, v)}
+            log={data.logs[markKey(week.week, s)]}
+            onLog={(patch) => setLog(week.week, s, patch)}
+          />
+        ))}
 
         <p className="text-[.8rem] text-bone-dim mt-4 leading-relaxed">
           <b className="text-bone">Never skip Day 2.</b> If a week falls apart from travel, the strength day is the one that matters most. And dead hang every day you can.

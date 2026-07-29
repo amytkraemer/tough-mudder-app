@@ -18,6 +18,7 @@ export function defaultData() {
       createdAt: null,
     },
     marks: {},                // "<week>:<run|strength|circuit>" -> done|backup|partial|missed
+    logs: {},                 // "<week>:<run|strength|circuit>" -> performance details
     hangs: [],                // { id, date, seconds, grip, notes }
   }
 }
@@ -40,6 +41,7 @@ function migrate(data) {
     ...data,
     settings: { ...d.settings, ...(data.settings || {}) },
     marks: data.marks || {},
+    logs: data.logs || {},
     hangs: Array.isArray(data.hangs) ? data.hangs : [],
     version: CURRENT_VERSION,
   }

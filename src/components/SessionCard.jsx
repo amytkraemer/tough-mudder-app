@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { BACKUP } from '../data/plan.js'
+import { logHasData, logSummary } from '../lib/metrics.js'
+import SessionLog from './SessionLog.jsx'
 
 const SPINE = { run: 'var(--lichen)', strength: 'var(--blaze)', circuit: 'var(--clay)' }
 const DAYMETA = {
@@ -31,11 +33,13 @@ export function StatusPill({ mark }) {
   )
 }
 
-export default function SessionCard({ kind, week, mark, onMark }) {
+export default function SessionCard({ kind, week, mark, onMark, log, onLog }) {
   const [showBackup, setShowBackup] = useState(false)
+  const [showLog, setShowLog] = useState(false)
   const meta = DAYMETA[kind]
   const isRun = kind === 'run'
   const content = isRun ? null : week[kind]
+  const hasLog = logHasData(log)
 
   return (
     <article
@@ -96,6 +100,26 @@ export default function SessionCard({ kind, week, mark, onMark }) {
             {BACKUP.exercises.map((e, i) => <li key={i}>{e}</li>)}
           </ul>
           <p className="text-[.8rem] text-bone-dim mt-2">Marking Backup logs the 15-min travel workout. It counts toward your totals.</p>
+        </div>
+      )}
+
+      {/* log what you actually did */}
+      <button
+        onClick={() => setShowLog((s) => !s)}
+        className="mt-3 w-full flex items-center justify-between rounded border border-line px-3 py-2.5 no-tap-highlight"
+      >
+        <span className="font-cond font-bold uppercase text-[.7rem] tracking-wider text-bone">
+          {showLog ? 'Hide log' : 'Log what you did'}
+        </span>
+        {hasLog && !showLog && (
+          <span className="font-cond font-semibold uppercase text-[.64rem] tracking-wide text-blaze">{logSummary(kind, log)} ›</span>
+        )}
+        {!hasLog && !showLog && <span className="text-bone-dim text-lg leading-none">＋</span>}
+        {showLog && <span className="text-bone-dim text-sm">▲</span>}
+      </button>
+      {showLog && (
+        <div className="mt-2 rounded border border-line bg-bog p-3">
+          <SessionLog kind={kind} week={week} log={log} onLog={onLog} />
         </div>
       )}
 

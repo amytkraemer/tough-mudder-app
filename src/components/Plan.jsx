@@ -29,7 +29,7 @@ function SessionMini({ kind, mark }) {
   )
 }
 
-export default function Plan({ schedule, data, setMark }) {
+export default function Plan({ schedule, data, setMark, setLog }) {
   const { weeks, currentIndex, daysToRace } = schedule
   const current = weeks[currentIndex]
   const stats = computeStats({ weeks, marks: data.marks })
@@ -131,9 +131,17 @@ export default function Plan({ schedule, data, setMark }) {
                         </button>
                         {weekOpen && (
                           <div className="px-3 pt-1 pb-3 bg-bog">
-                            <SessionCard kind="run" week={w} mark={data.marks[markKey(w.week, 'run')]} onMark={(v) => setMark(w.week, 'run', v)} />
-                            <SessionCard kind="strength" week={w} mark={data.marks[markKey(w.week, 'strength')]} onMark={(v) => setMark(w.week, 'strength', v)} />
-                            <SessionCard kind="circuit" week={w} mark={data.marks[markKey(w.week, 'circuit')]} onMark={(v) => setMark(w.week, 'circuit', v)} />
+                            {['run', 'strength', 'circuit'].map((s) => (
+                              <SessionCard
+                                key={s}
+                                kind={s}
+                                week={w}
+                                mark={data.marks[markKey(w.week, s)]}
+                                onMark={(v) => setMark(w.week, s, v)}
+                                log={data.logs[markKey(w.week, s)]}
+                                onLog={(patch) => setLog(w.week, s, patch)}
+                              />
+                            ))}
                           </div>
                         )}
                       </div>
