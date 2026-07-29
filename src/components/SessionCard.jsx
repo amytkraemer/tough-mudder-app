@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { BACKUP } from '../data/plan.js'
-import { logHasData, logSummary } from '../lib/metrics.js'
+import { logHasData, logSummary, anyModified, shortName } from '../lib/metrics.js'
+import { modificationFor } from '../data/modifications.js'
 import SessionLog from './SessionLog.jsx'
 
 const SPINE = { run: 'var(--lichen)', strength: 'var(--blaze)', circuit: 'var(--clay)' }
@@ -36,10 +37,14 @@ export function StatusPill({ mark }) {
 export default function SessionCard({ kind, week, mark, onMark, log, onLog }) {
   const [showBackup, setShowBackup] = useState(false)
   const [showLog, setShowLog] = useState(false)
+  const [showMods, setShowMods] = useState(false)
   const meta = DAYMETA[kind]
   const isRun = kind === 'run'
   const content = isRun ? null : week[kind]
   const hasLog = logHasData(log)
+  const modList = isRun ? [] : content.exercises
+    .map((ex, i) => ({ i, ex, tip: modificationFor(ex) }))
+    .filter((x) => x.tip)
 
   return (
     <article
@@ -80,6 +85,47 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog }) {
               <ul className="cues">
                 {content.grip.map((g, i) => <li key={i}>{g}</li>)}
               </ul>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* easier options + "did modified" tracking */}
+      {modList.length > 0 && (
+        <>
+          <button
+            onClick={() => setShowMods((s) => !s)}
+            className="mt-3 ml-0 text-[.8rem] text-lichen underline"
+          >
+            {showMods ? 'Hide easier options' : 'Easier options'}
+            {!showMods && anyModified(log) && <span className="text-blaze"> · modified</span>}
+          </button>
+          {showMods && (
+            <div className="mt-2 rounded border border-line bg-bog p-3">
+              <p className="text-[.72rem] text-bone-dim mb-2">Can’t do the full version yet? Do the easier one and check it off — it still counts.</p>
+              {modList.map(({ i, ex, tip }) => {
+                const on = !!log?.ex?.[i]?.mod
+                return (
+                  <div key={i} className="py-2 border-t border-line first:border-t-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="text-[.86rem] font-semibold">{shortName(ex)}</div>
+                        <div className="text-[.78rem] text-bone-dim mt-0.5">{tip}</div>
+                      </div>
+                      <button
+                        onClick={() => onLog({ ex: { [i]: { mod: !on } } })}
+                        aria-pressed={on}
+                        className={`flex-none flex items-center gap-1.5 rounded border px-2.5 py-1.5 no-tap-highlight ${
+                          on ? 'bg-blaze border-blaze text-bog' : 'border-line text-bone-dim'
+                        }`}
+                      >
+                        <span className="text-sm leading-none">{on ? '☑' : '☐'}</span>
+                        <span className="font-cond font-bold uppercase text-[.62rem] tracking-wide">Modified</span>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </>

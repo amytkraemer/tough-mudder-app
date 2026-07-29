@@ -38,8 +38,12 @@ export function parseRounds(scheme) {
 export function logHasData(log) {
   if (!log) return false
   if (log.min || log.mi || log.rounds || (log.notes && log.notes.trim())) return true
-  if (log.ex) return Object.values(log.ex).some((e) => e && (e.n || e.w))
+  if (log.ex) return Object.values(log.ex).some((e) => e && (e.n || e.w || e.mod))
   return false
+}
+
+export function anyModified(log) {
+  return !!(log && log.ex && Object.values(log.ex).some((e) => e && e.mod))
 }
 
 export function logSummary(kind, log) {
@@ -47,9 +51,10 @@ export function logSummary(kind, log) {
   if (kind === 'run') {
     return [log.min ? `${log.min} min` : '', log.mi ? `${log.mi} mi` : ''].filter(Boolean).join(' · ')
   }
+  const mod = anyModified(log) ? ' · modified' : ''
   if (kind === 'circuit') {
-    return log.rounds ? `${log.rounds} rounds` : 'logged'
+    return (log.rounds ? `${log.rounds} rounds` : 'logged') + mod
   }
   const n = log.ex ? Object.values(log.ex).filter((e) => e && (e.n || e.w)).length : 0
-  return n ? `${n} logged` : 'logged'
+  return (n ? `${n} logged` : 'logged') + mod
 }
