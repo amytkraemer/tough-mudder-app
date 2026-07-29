@@ -160,15 +160,15 @@ export const EX_GROUPS = [
         miss: 'Doing it first. Towel hang <em>after</em> your regular hang, or your grip is already gone.',
       },
       {
-        h: 'Backpack bent-over row', spine: 'lichen', s: 'sA backup',
+        h: 'Bent-over row', spine: 'lichen', s: 'sA backup',
         watch: yt('bent+over+row+form+beginner'),
         tags: [{ t: 'Pull', c: 'pull' }, { t: 'Back' }],
         cues: [
-          'Load a backpack with books, water bottles, whatever is heavy.',
-          'Hinge forward at the hips until your torso is about 45 degrees. Flat back, knees soft.',
-          'Hold a strap in each hand, pull the pack to your belly button. Elbows go back, not out.',
+          'A dumbbell (or any weight) in each hand. Hinge forward at the hips until your torso is about 45 degrees. Flat back, knees soft.',
+          'Pull the weights to your belly button. Elbows go back, not out.',
           'Squeeze your shoulder blades together at the top. Lower slowly.',
         ],
+        mod: 'No weights on the road? Load a backpack with books or water bottles and hold a strap in each hand. Same movement.',
         miss: 'Rounding your back. If you cannot keep it flat, hinge less.',
       },
       {

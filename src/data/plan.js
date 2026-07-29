@@ -79,7 +79,7 @@ export const STRENGTH = {
       'Push-up × 8-12 (hands on desk or bed edge if floor push-ups aren’t there yet)',
       'Reverse lunge × 10 each leg',
       'Glute bridge × 15',
-      'Bent-over row with backpack loaded with books × 12',
+      'Bent-over row × 12 (dumbbells or weights; a backpack of books on the road)',
       'Plank 30 sec',
       'Dead bug × 10 each side',
     ],
@@ -128,6 +128,43 @@ export const STRENGTH = {
       'Suitcase hold: 30 sec each side',
     ],
   },
+}
+
+// Strength A progresses week to week. Rather than make you remember the rule
+// ("add 1 rep/week; at ~20 add a round and reset"), we compute this week's exact
+// reps and round count from where you are in the Base phase.
+const STRENGTH_A_BASE = [
+  { name: 'Bodyweight squat', base: 15 },
+  { name: 'Push-up', range: [8, 12], note: 'hands on desk or bed edge if floor push-ups aren’t there yet' },
+  { name: 'Reverse lunge', base: 10, unit: ' each leg' },
+  { name: 'Glute bridge', base: 15 },
+  { name: 'Bent-over row', base: 12, note: 'dumbbells or weights; a backpack of books on the road' },
+  { name: 'Plank', base: 30, time: true },
+  { name: 'Dead bug', base: 10, unit: ' each side' },
+]
+
+export function strengthAForWeek(weekInPhase) {
+  const w = Math.max(1, weekInPhase || 1)
+  const cycle = 5                              // add 1 rep/week; after 5 weeks, add a round + reset
+  const step = (w - 1) % cycle                 // 0..4 reps added this cycle
+  const rounds = 3 + Math.floor((w - 1) / cycle)
+  const exercises = STRENGTH_A_BASE.map((e) => {
+    if (e.range) {
+      return `${e.name} × ${e.range[0] + step}-${e.range[1] + step}${e.note ? ` (${e.note})` : ''}`
+    }
+    if (e.time) {
+      return `${e.name} ${e.base + step * 5} sec`
+    }
+    return `${e.name} × ${e.base + step}${e.unit || ''}${e.note ? ` (${e.note})` : ''}`
+  })
+  return {
+    ...STRENGTH.A,
+    scheme: `Week ${w} of Base · ${rounds} rounds · 60 sec rest between rounds`,
+    exercises,
+    progression: step === 4
+      ? 'Top of the cycle — next week add a round and drop the reps back down.'
+      : 'These are this week’s exact reps. They step up 1 each week automatically.',
+  }
 }
 
 // ---- CIRCUIT sessions ----

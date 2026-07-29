@@ -11,7 +11,7 @@
 import {
   PHASES, PHASE1_RUNS, PHASE2_RUNS, PHASE2_MAINTENANCE, PHASE3_RUNS,
   PHASE3_ROTATION, PHASE4_TERRAIN_RUN, TAPER_RUN, RACE_WEEK_RUN,
-  STRENGTH, CIRCUIT, TAPER,
+  STRENGTH, CIRCUIT, TAPER, strengthAForWeek,
 } from '../data/plan.js'
 
 const DAY = 86400000
@@ -142,7 +142,7 @@ export function buildSchedule({ raceDate, runningBase = 'none', daysPerWeek = 3,
     if (i < b1) {                          // Phase 1 — Base
       phaseId = 1; phaseIdx = i
       run = runForPhase1(i, base.skip)
-      strength = STRENGTH.A; circuit = CIRCUIT.A
+      strength = strengthAForWeek(i + 1); circuit = CIRCUIT.A
     } else if (i < b2) {                    // Phase 2 — Strength Build
       phaseId = 2; phaseIdx = i - b1
       run = runForPhase2(phaseIdx)
