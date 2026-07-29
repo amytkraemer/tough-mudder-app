@@ -34,7 +34,7 @@ export function StatusPill({ mark }) {
   )
 }
 
-export default function SessionCard({ kind, week, mark, onMark, log, onLog }) {
+export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev }) {
   const [showBackup, setShowBackup] = useState(false)
   const [showLog, setShowLog] = useState(false)
   const [showMods, setShowMods] = useState(false)
@@ -95,7 +95,7 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog }) {
         <>
           <button
             onClick={() => setShowMods((s) => !s)}
-            className="mt-3 ml-0 text-[.8rem] text-lichen underline"
+            className="mt-3 mr-4 text-[.8rem] text-lichen underline"
           >
             {showMods ? 'Hide easier options' : 'Easier options'}
             {!showMods && anyModified(log) && <span className="text-blaze"> · modified</span>}
@@ -165,7 +165,7 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog }) {
       </button>
       {showLog && (
         <div className="mt-2 rounded border border-line bg-bog p-3">
-          <SessionLog kind={kind} week={week} log={log} onLog={onLog} />
+          <SessionLog kind={kind} week={week} log={log} onLog={onLog} prev={prev} />
         </div>
       )}
 

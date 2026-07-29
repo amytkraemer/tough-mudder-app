@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { computeStats } from '../lib/stats.js'
+import { buildLogIndex, prevFor } from '../lib/metrics.js'
 import { markKey } from '../lib/storage.js'
 import { PHASES } from '../data/plan.js'
 import SessionCard, { StatusPill } from './SessionCard.jsx'
@@ -33,6 +34,7 @@ export default function Plan({ schedule, data, setMark, setLog }) {
   const { weeks, currentIndex, daysToRace } = schedule
   const current = weeks[currentIndex]
   const stats = computeStats({ weeks, marks: data.marks })
+  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs), [weeks, data.logs])
 
   const [openPhases, setOpenPhases] = useState(() => ({ [current.phaseId]: true }))
   const [openWeek, setOpenWeek] = useState(current.week)
@@ -140,6 +142,7 @@ export default function Plan({ schedule, data, setMark, setLog }) {
                                 onMark={(v) => setMark(w.week, s, v)}
                                 log={data.logs[markKey(w.week, s)]}
                                 onLog={(patch) => setLog(w.week, s, patch)}
+                                prev={prevFor(logIndex, w.week, s, w)}
                               />
                             ))}
                           </div>

@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { markKey } from '../lib/storage.js'
 import { dayPlan } from '../lib/schedule.js'
+import { buildLogIndex, prevFor } from '../lib/metrics.js'
 import SessionCard from './SessionCard.jsx'
 
 const HATCH = {
@@ -13,6 +15,7 @@ export default function Today({ schedule, data, setMark, setLog, onOpenSettings,
   const week = weeks[currentIndex]
   const marks = data.marks
   const plan = dayPlan(data.settings.daysPerWeek)
+  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs), [weeks, data.logs])
 
   const doneThisWeek = ['run', 'strength', 'circuit'].filter((s) => {
     const m = marks[markKey(week.week, s)]
@@ -102,6 +105,7 @@ export default function Today({ schedule, data, setMark, setLog, onOpenSettings,
             onMark={(v) => setMark(week.week, s, v)}
             log={data.logs[markKey(week.week, s)]}
             onLog={(patch) => setLog(week.week, s, patch)}
+            prev={prevFor(logIndex, week.week, s, week)}
           />
         ))}
 

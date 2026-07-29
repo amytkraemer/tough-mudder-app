@@ -1,8 +1,9 @@
 const TABS = [
   { key: 'today', label: 'Today', icon: TodayIcon },
   { key: 'plan', label: 'Plan', icon: PlanIcon },
-  { key: 'exercises', label: 'Exercises', icon: ExIcon },
+  { key: 'exercises', label: 'Moves', icon: ExIcon },
   { key: 'grip', label: 'Grip', icon: GripIcon },
+  { key: 'progress', label: 'Progress', icon: ProgressIcon },
 ]
 
 export default function TabBar({ tab, setTab }) {
@@ -11,7 +12,7 @@ export default function TabBar({ tab, setTab }) {
       className="fixed bottom-0 left-0 right-0 z-30 border-t border-line bg-bog/95 backdrop-blur no-tap-highlight"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="mx-auto max-w-[760px] grid grid-cols-4">
+      <div className="mx-auto max-w-[760px] grid grid-cols-5">
         {TABS.map((t) => {
           const active = tab === t.key
           const Icon = t.icon
@@ -52,4 +53,7 @@ function ExIcon({ active }) {
 }
 function GripIcon({ active }) {
   return (<svg {...base(active)} viewBox="0 0 24 24"><path d="M4 6h16" /><path d="M8 6v5a4 4 0 008 0V6" /></svg>)
+}
+function ProgressIcon({ active }) {
+  return (<svg {...base(active)} viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 7-7" /><path d="M17 8h4v4" /></svg>)
 }

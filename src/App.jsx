@@ -8,6 +8,7 @@ import Today from './components/Today.jsx'
 import Plan from './components/Plan.jsx'
 import Exercises from './components/Exercises.jsx'
 import Grip from './components/Grip.jsx'
+import Progress from './components/Progress.jsx'
 import Settings from './components/Settings.jsx'
 import ExportNudge from './components/ExportNudge.jsx'
 
@@ -95,6 +96,7 @@ export default function App() {
         {tab === 'plan' && <Plan schedule={schedule} data={data} setMark={setMark} setLog={setLog} />}
         {tab === 'exercises' && <Exercises data={data} update={update} />}
         {tab === 'grip' && <Grip data={data} update={update} />}
+        {tab === 'progress' && <Progress schedule={schedule} data={data} />}
       </div>
 
       <ExportNudge data={data} update={update} />

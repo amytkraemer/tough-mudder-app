@@ -17,18 +17,21 @@ function Num({ value, onChange, placeholder, suffix, w = 'w-full' }) {
   )
 }
 
-export default function SessionLog({ kind, week, log, onLog }) {
+export default function SessionLog({ kind, week, log, onLog, prev }) {
   const notes = log?.notes || ''
+  const prevWeek = prev?.week || (prev?.ex && Object.values(prev.ex)[0]?.week)
+  const hint = prevWeek ? <p className="text-[.68rem] text-bone-dim mb-2">Greyed numbers are what you did last time (week {prevWeek}). Beat them.</p> : null
 
   if (kind === 'run') {
     return (
       <div>
+        {hint}
         <div className="grid grid-cols-2 gap-2">
           <label className="text-[.68rem] text-bone-dim">Time
-            <Num value={log?.min} onChange={(v) => onLog({ min: v })} placeholder="0" suffix="min" />
+            <Num value={log?.min} onChange={(v) => onLog({ min: v })} placeholder={prev?.min || '0'} suffix="min" />
           </label>
           <label className="text-[.68rem] text-bone-dim">Distance
-            <Num value={log?.mi} onChange={(v) => onLog({ mi: v })} placeholder="0" suffix="mi" />
+            <Num value={log?.mi} onChange={(v) => onLog({ mi: v })} placeholder={prev?.mi || '0'} suffix="mi" />
           </label>
         </div>
         <NotesField value={notes} onChange={(v) => onLog({ notes: v })} />
@@ -39,8 +42,9 @@ export default function SessionLog({ kind, week, log, onLog }) {
   if (kind === 'circuit') {
     return (
       <div>
+        {hint}
         <label className="text-[.68rem] text-bone-dim block">Rounds completed
-          <Num value={log?.rounds} onChange={(v) => onLog({ rounds: v })} placeholder={parseRounds(week.circuit.scheme) || '0'} suffix="rounds" w="w-32" />
+          <Num value={log?.rounds} onChange={(v) => onLog({ rounds: v })} placeholder={prev?.rounds || parseRounds(week.circuit.scheme) || '0'} suffix="rounds" w="w-32" />
         </label>
         <NotesField value={notes} onChange={(v) => onLog({ notes: v })} />
       </div>
@@ -51,11 +55,13 @@ export default function SessionLog({ kind, week, log, onLog }) {
   const exercises = week.strength.exercises
   return (
     <div>
+      {hint}
       <div className="flex flex-col gap-1.5">
         {exercises.map((ex, i) => {
           const { metric, weight } = exerciseInput(ex)
           const target = parseTarget(ex, metric)
           const cur = log?.ex?.[i] || {}
+          const p = prev?.ex?.[i]
           return (
             <div key={i} className="flex items-center gap-2">
               <span className="flex-1 text-[.82rem] text-bone truncate">{shortName(ex)}</span>
@@ -63,13 +69,13 @@ export default function SessionLog({ kind, week, log, onLog }) {
                 <Num
                   value={cur.n}
                   onChange={(v) => onLog({ ex: { [i]: { n: v } } })}
-                  placeholder={target || '0'}
+                  placeholder={p?.n || target || '0'}
                   suffix={metric === 'seconds' ? 'sec' : 'reps'}
                 />
               </div>
               {weight && (
                 <div className="w-[62px]">
-                  <Num value={cur.w} onChange={(v) => onLog({ ex: { [i]: { w: v } } })} placeholder="wt" suffix="lb" />
+                  <Num value={cur.w} onChange={(v) => onLog({ ex: { [i]: { w: v } } })} placeholder={p?.w || 'wt'} suffix="lb" />
                 </div>
               )}
             </div>
