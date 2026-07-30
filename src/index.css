@@ -1,0 +1,70 @@
+@import './fonts.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --bog:#0E1712;
+  --surface:#17241D;
+  --surface-2:#1F3128;
+  --line:#2F473A;
+  --bone:#E9E5D8;
+  --bone-dim:#9DAA9F;
+  --blaze:#F2A33C;
+  --lichen:#7FA986;
+  --clay:#B5734A;
+  --alarm:#E36B5A;
+  --r:3px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bog); color:var(--bone);
+  font-family:'Barlow',system-ui,sans-serif; font-size:16px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:none;
+}
+/* respect safe areas / notch */
+.safe-top{padding-top:env(safe-area-inset-top)}
+.safe-bottom{padding-bottom:env(safe-area-inset-bottom)}
+
+button{font-family:inherit}
+h1,h2,h3{margin:0}
+a{color:var(--lichen)}
+
+/* headings reused from exercise guide */
+.font-display{font-family:'Archivo Black',sans-serif;font-weight:400}
+.eyebrow{
+  font-family:'Barlow Semi Condensed',sans-serif; font-weight:700;
+  text-transform:uppercase; letter-spacing:.18em; font-size:.7rem;
+  color:var(--blaze);
+}
+.h1{
+  font-family:'Archivo Black',sans-serif; font-weight:400;
+  font-size:clamp(1.7rem,7vw,2.6rem); line-height:.95;
+  letter-spacing:-.02em; text-transform:uppercase;
+}
+.h1 em{font-style:normal;color:var(--blaze)}
+
+/* card cue list from guide */
+.cues{margin:0;padding:0;list-style:none}
+.cues li{position:relative;padding-left:1.05rem;margin-bottom:.32rem;font-size:.92rem}
+.cues li::before{content:"";position:absolute;left:0;top:.55em;width:5px;height:5px;background:var(--lichen)}
+
+.miss{margin:.7rem 0 0;padding:.5rem .65rem;border-radius:2px;
+  background:rgba(227,107,90,.09);border-left:2px solid var(--alarm);
+  font-size:.86rem;color:#EFD9D4}
+.miss b{color:var(--alarm);font-weight:700;font-family:'Barlow Semi Condensed',sans-serif;
+  text-transform:uppercase;letter-spacing:.09em;font-size:.68rem;display:block;margin-bottom:.1rem}
+.mod{display:none;margin:.7rem 0 0;padding:.5rem .65rem;border-radius:2px;
+  background:rgba(127,169,134,.1);border-left:2px solid var(--lichen);
+  font-size:.86rem;color:#D9E5DB}
+.mod b{color:var(--lichen);font-weight:700;font-family:'Barlow Semi Condensed',sans-serif;
+  text-transform:uppercase;letter-spacing:.09em;font-size:.68rem;display:block;margin-bottom:.1rem}
+body.hotel .mod{display:block}
+
+.chips{display:flex;gap:.35rem;overflow-x:auto;padding-bottom:.3rem;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+
+.no-tap-highlight{-webkit-tap-highlight-color:transparent}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
