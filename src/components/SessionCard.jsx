@@ -36,14 +36,14 @@ export function StatusPill({ mark }) {
   )
 }
 
-export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev, label, titleOverride, onRemove }) {
+export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev, label, titleOverride, contentOverride, note, onRemove }) {
   const [showBackup, setShowBackup] = useState(false)
   const [showLog, setShowLog] = useState(false)
   const [showMods, setShowMods] = useState(false)
   const [timer, setTimer] = useState(false)
   const meta = DAYMETA[kind]
   const isRun = kind === 'run'
-  const content = isRun ? null : week[kind]
+  const content = isRun ? null : (contentOverride || week[kind])
   const hasLog = logHasData(log)
   const runText = isRun ? (titleOverride || week.run) : ''
   const guided = isRun ? parseRun(runText) : null
@@ -73,6 +73,10 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev
           )}
         </div>
       </div>
+
+      {note && (
+        <p className="mt-2 text-[.78rem] rounded px-2.5 py-1.5" style={{ background: 'rgba(255,212,0,.10)', borderLeft: '2px solid var(--caution,#FFD400)', color: 'var(--bone)' }}>{note}</p>
+      )}
 
       {isRun ? (
         <div className="mt-3 text-sm text-bone-dim">
@@ -186,7 +190,7 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev
       </button>
       {showLog && (
         <div className="mt-2 rounded border border-line bg-bog p-3">
-          <SessionLog kind={kind} week={week} log={log} onLog={onLog} prev={prev} />
+          <SessionLog kind={kind} content={content} log={log} onLog={onLog} prev={prev} />
         </div>
       )}
 

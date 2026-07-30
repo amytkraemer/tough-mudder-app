@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { RUNNING_BASE, buildSchedule } from '../lib/schedule.js'
 import { RACE_INFO } from '../data/plan.js'
+import { BEGINNER_VOLUME_WARNING } from '../data/overlays.js'
 
 const HATCH = {
   backgroundImage:
@@ -105,6 +106,11 @@ export default function Onboarding({ onDone, sync }) {
                 <div className="text-sm text-bone-dim">{v.desc}</div>
               </button>
             ))}
+            {daysPerWeek >= 5 && runningBase === 'none' && (
+              <p className="text-[.82rem] rounded px-3 py-2" style={{ background: 'rgba(255,212,0,.12)', borderLeft: '3px solid var(--caution,#FFD400)', color: 'var(--bone)' }}>
+                {BEGINNER_VOLUME_WARNING}
+              </p>
+            )}
             <p className="text-sm text-bone-dim mt-1">
               This only moves where your <b className="text-bone">running</b> starts. Strength always starts at Strength A — running fitness doesn’t transfer to grip.
             </p>

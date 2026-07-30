@@ -3,6 +3,7 @@ import { computeStats } from '../lib/stats.js'
 import { buildLogIndex, prevFor } from '../lib/metrics.js'
 import { markKey } from '../lib/storage.js'
 import ExtraArea from './ExtraArea.jsx'
+import OverlaySection from './OverlaySection.jsx'
 import { PHASES } from '../data/plan.js'
 import SessionCard, { StatusPill } from './SessionCard.jsx'
 
@@ -146,6 +147,7 @@ export default function Plan({ schedule, data, setMark, setLog, addExtra, remove
                                 prev={prevFor(logIndex, w.week, s, w)}
                               />
                             ))}
+                            <OverlaySection week={w} data={data} logIndex={logIndex} setMark={setMark} setLog={setLog} />
                             <ExtraArea
                               week={w}
                               data={data}

@@ -3,6 +3,7 @@ import { markKey } from '../lib/storage.js'
 import { dayPlan } from '../lib/schedule.js'
 import { buildLogIndex, prevFor } from '../lib/metrics.js'
 import SessionCard from './SessionCard.jsx'
+import OverlaySection from './OverlaySection.jsx'
 import ExtraArea from './ExtraArea.jsx'
 
 const HATCH = {
@@ -109,6 +110,8 @@ export default function Today({ schedule, data, setMark, setLog, addExtra, remov
             prev={prevFor(logIndex, week.week, s, week)}
           />
         ))}
+
+        <OverlaySection week={week} data={data} logIndex={logIndex} setMark={setMark} setLog={setLog} />
 
         <ExtraArea
           week={week}

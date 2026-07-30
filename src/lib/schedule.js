@@ -13,6 +13,8 @@ import {
   PHASE3_ROTATION, PHASE4_TERRAIN_RUN, TAPER_RUN, RACE_WEEK_RUN,
   STRENGTH, CIRCUIT, TAPER, strengthAForWeek,
 } from '../data/plan.js'
+import { scaleRun } from './runScaling.js'
+import { overlaysForWeek } from '../data/overlays.js'
 
 const DAY = 86400000
 
@@ -191,6 +193,9 @@ export function buildSchedule({ raceDate, runningBase = 'none', daysPerWeek = 3,
       }
     }
 
+    // scale the Day 1 run by experience (never touches Phase 1 / Broken 5K / taper)
+    run = scaleRun(run, runningBase, { phaseId, isTaper, isRaceWeek, isDay1: true })
+
     weeks.push({
       week: i + 1,
       phaseId,
@@ -205,6 +210,12 @@ export function buildSchedule({ raceDate, runningBase = 'none', daysPerWeek = 3,
       isTaper,
       isRaceWeek,
     })
+  }
+
+  // Attach optional overlay days (Grip & Pull, Easy Run 2, Mobility & Carry).
+  // These depend on days-per-week + running base and never change the core plan.
+  for (let i = 0; i < weeks.length; i++) {
+    weeks[i].overlays = overlaysForWeek(weeks[i], weeks[i - 1], daysPerWeek, runningBase)
   }
 
   // Current week from today (day-number comparison, timezone-independent).
