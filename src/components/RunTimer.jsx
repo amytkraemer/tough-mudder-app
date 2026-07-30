@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 const KIND_COLOR = {
   run: 'var(--lichen)', walk: 'var(--ash, #8E9199)', hard: 'var(--kill, #C63A26)',
@@ -105,8 +106,13 @@ export default function RunTimer({ title, intervals, onClose, onDone }) {
   const frac = phase.sec ? (phase.sec - d.remaining) / phase.sec : 0
   const totalElapsed = Math.floor(elapsedMs() / 1000)
 
-  return (
-    <div className="fixed inset-0 z-50 bg-pitch flex flex-col safe-top safe-bottom" style={{ background: 'var(--pitch, #0A0A0B)' }}>
+  // Portal to <body> so the fixed overlay isn't trapped by the session card's
+  // clip-path (a clipped/transformed ancestor becomes the containing block for
+  // position:fixed). Pin to the dynamic viewport height so the controls always
+  // sit at the bottom of the visible screen.
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex flex-col safe-top safe-bottom overflow-hidden"
+      style={{ background: 'var(--pitch, #0A0A0B)', height: '100dvh', maxHeight: '100dvh' }}>
       <div className="flex items-center justify-between px-5 pt-6 pb-3">
         <div className="min-w-0">
           <p className="eyebrow">Guided run</p>
@@ -116,7 +122,7 @@ export default function RunTimer({ title, intervals, onClose, onDone }) {
       </div>
 
       {finished ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 text-center">
           <div className="font-display uppercase text-5xl mb-2" style={{ color: 'var(--lichen)' }}>Done</div>
           <p className="mb-1" style={{ color: 'var(--ash,#8E9199)' }}>Total time</p>
           <div className="font-display text-6xl mb-8">{mmss(totalElapsed)}</div>
@@ -128,7 +134,7 @@ export default function RunTimer({ title, intervals, onClose, onDone }) {
         </div>
       ) : (
         <>
-          <div className="flex-1 flex flex-col items-center justify-center px-6" style={{ background: `radial-gradient(120% 55% at 50% 42%, ${color}22, transparent)` }}>
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6" style={{ background: `radial-gradient(120% 55% at 50% 42%, ${color}22, transparent)` }}>
             <p className="font-cond font-bold uppercase tracking-[.2em] text-sm mb-3" style={{ color }}>{phase.label}</p>
             <div className="font-display leading-none tabular-nums" style={{ fontSize: '5.5rem', color }}>{mmss(Math.ceil(d.remaining))}</div>
             <div className="mt-6 w-full max-w-sm">
@@ -158,6 +164,7 @@ export default function RunTimer({ title, intervals, onClose, onDone }) {
           </div>
         </>
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }
