@@ -7,7 +7,7 @@ import { CURRENT_VERSION, defaultData } from './storage.js'
 
 // Only these fields sync. UI-only state stays local.
 function pick(d) {
-  return { settings: d.settings, marks: d.marks || {}, logs: d.logs || {}, bonus: d.bonus || {}, hangs: d.hangs || [] }
+  return { settings: d.settings, marks: d.marks || {}, logs: d.logs || {}, extra: d.extra || {}, hangs: d.hangs || [] }
 }
 
 function dedupeHangs(arr) {
@@ -27,7 +27,7 @@ function mergeInitial(local, remote) {
     settings,
     marks: { ...remote.marks, ...local.marks },
     logs: { ...remote.logs, ...local.logs },
-    bonus: { ...remote.bonus, ...local.bonus },
+    extra: { ...remote.extra, ...local.extra },
     hangs: dedupeHangs([...(remote.hangs || []), ...(local.hangs || [])]),
   }
 }
@@ -40,7 +40,7 @@ function applyRemote(remote) {
     settings: { ...d.settings, ...(remote.settings || {}) },
     marks: remote.marks || {},
     logs: remote.logs || {},
-    bonus: remote.bonus || {},
+    extra: remote.extra || {},
     hangs: remote.hangs || [],
   }
 }

@@ -3,7 +3,7 @@ import { markKey } from '../lib/storage.js'
 import { dayPlan } from '../lib/schedule.js'
 import { buildLogIndex, prevFor } from '../lib/metrics.js'
 import SessionCard from './SessionCard.jsx'
-import BonusArea from './BonusArea.jsx'
+import ExtraArea from './ExtraArea.jsx'
 
 const HATCH = {
   backgroundImage:
@@ -11,12 +11,12 @@ const HATCH = {
 }
 const PHASE_ACCENT = { 1: 'var(--lichen)', 2: 'var(--blaze)', 3: 'var(--clay)', 4: 'var(--alarm)' }
 
-export default function Today({ schedule, data, setMark, setLog, addBonus, removeBonus, onOpenSettings, onGoPlan }) {
+export default function Today({ schedule, data, setMark, setLog, addExtra, removeExtra, onOpenSettings, onGoPlan }) {
   const { weeks, currentIndex, status, daysToRace } = schedule
   const week = weeks[currentIndex]
   const marks = data.marks
   const plan = dayPlan(data.settings.daysPerWeek)
-  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.bonus), [weeks, data.logs, data.bonus])
+  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.extra), [weeks, data.logs, data.extra])
 
   const doneThisWeek = ['run', 'strength', 'circuit'].filter((s) => {
     const m = marks[markKey(week.week, s)]
@@ -110,14 +110,14 @@ export default function Today({ schedule, data, setMark, setLog, addBonus, remov
           />
         ))}
 
-        <BonusArea
+        <ExtraArea
           week={week}
           data={data}
           logIndex={logIndex}
           setMark={setMark}
           setLog={setLog}
-          addBonus={addBonus}
-          removeBonus={removeBonus}
+          addExtra={addExtra}
+          removeExtra={removeExtra}
           daysPerWeek={data.settings.daysPerWeek}
         />
 

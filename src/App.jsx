@@ -54,19 +54,21 @@ export default function App() {
     })
   }, [update])
 
-  const addBonus = useCallback((week, kind) => {
+  // Add an extra session. kind is run|strength|circuit (reuses the week's
+  // prescription); an optional preset id points at the supplemental library.
+  const addExtra = useCallback((week, kind, preset = null) => {
     update((d) => {
-      const list = d.bonus[week] || []
+      const list = d.extra[week] || []
       const n = list.reduce((m, b) => Math.max(m, b.n || 0), 0) + 1
-      d.bonus[week] = [...list, { id: `bonus-${kind}-${n}`, kind, n }]
+      d.extra[week] = [...list, { id: `extra-${preset || kind}-${n}`, kind, n, preset }]
       return d
     })
   }, [update])
 
-  const removeBonus = useCallback((week, id) => {
+  const removeExtra = useCallback((week, id) => {
     update((d) => {
-      d.bonus[week] = (d.bonus[week] || []).filter((b) => b.id !== id)
-      if (!d.bonus[week].length) delete d.bonus[week]
+      d.extra[week] = (d.extra[week] || []).filter((b) => b.id !== id)
+      if (!d.extra[week].length) delete d.extra[week]
       delete d.marks[`${week}:${id}`]
       delete d.logs[`${week}:${id}`]
       return d
@@ -108,13 +110,13 @@ export default function App() {
             data={data}
             setMark={setMark}
             setLog={setLog}
-            addBonus={addBonus}
-            removeBonus={removeBonus}
+            addExtra={addExtra}
+            removeExtra={removeExtra}
             onOpenSettings={() => setShowSettings(true)}
             onGoPlan={() => setTab('plan')}
           />
         )}
-        {tab === 'plan' && <Plan schedule={schedule} data={data} setMark={setMark} setLog={setLog} addBonus={addBonus} removeBonus={removeBonus} />}
+        {tab === 'plan' && <Plan schedule={schedule} data={data} setMark={setMark} setLog={setLog} addExtra={addExtra} removeExtra={removeExtra} />}
         {tab === 'exercises' && <Exercises data={data} update={update} />}
         {tab === 'grip' && <Grip data={data} update={update} />}
         {tab === 'progress' && <Progress schedule={schedule} data={data} />}

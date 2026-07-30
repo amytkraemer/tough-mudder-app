@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 
 const KIND_COLOR = {
-  run: 'var(--lichen)', walk: 'var(--bone-dim)', hard: 'var(--alarm)', easy: 'var(--blaze)',
+  run: 'var(--lichen)', walk: 'var(--ash, #8E9199)', hard: 'var(--kill, #C63A26)',
+  easy: 'var(--blaze)', incline: 'var(--blaze)',
 }
 function mmss(s) {
-  const m = Math.floor(s / 60), r = Math.max(0, s % 60)
+  const m = Math.floor(s / 60), r = Math.max(0, Math.round(s % 60))
   return `${m}:${String(r).padStart(2, '0')}`
 }
-
-// short beep via Web Audio
 function beep(freq = 880, ms = 160) {
   try {
     const AC = window.AudioContext || window.webkitAudioContext
@@ -23,119 +22,137 @@ function beep(freq = 880, ms = 160) {
     o.start(); o.stop(ctx.currentTime + ms / 1000)
   } catch {}
 }
-function buzz(ms) { try { navigator.vibrate?.(ms) } catch {} }
+function buzz(p) { try { navigator.vibrate?.(p) } catch {} }
 
+// Absolute-timeline clock: everything is derived from wall-clock elapsed time
+// (accumMs + skipMs + time since the current running segment began). Screen
+// lock, throttled timers, and multi-phase catch-up all just work, because we
+// never decrement state — we recompute position from elapsed on every tick.
 export default function RunTimer({ title, intervals, onClose, onDone }) {
-  const [idx, setIdx] = useState(0)
-  const [left, setLeft] = useState(intervals[0].sec)
+  const cum = [0]
+  for (const p of intervals) cum.push(cum[cum.length - 1] + p.sec)
+  const totalSec = cum[cum.length - 1]
+
   const [running, setRunning] = useState(false)
-  const [elapsed, setElapsed] = useState(0)
   const [finished, setFinished] = useState(false)
+  const [, tick] = useState(0)
+  const accumMs = useRef(0)      // running time banked from previous segments
+  const skipMs = useRef(0)       // time jumped forward via Skip
+  const runStartedAt = useRef(0) // wall-clock start of the current running segment
+  const lastIdx = useRef(0)
+  const lastBeep = useRef(null)
   const wakeRef = useRef(null)
-  const tick = useRef()
 
-  const total = intervals.reduce((a, p) => a + p.sec, 0)
-  const phase = intervals[idx]
-  const next = intervals[idx + 1]
+  const elapsedMs = () => accumMs.current + skipMs.current + (running ? Date.now() - runStartedAt.current : 0)
+  const derive = () => {
+    const e = elapsedMs() / 1000
+    if (e >= totalSec) return { idx: intervals.length - 1, remaining: 0, done: true, e }
+    let idx = 0
+    while (idx < intervals.length - 1 && e >= cum[idx + 1]) idx++
+    return { idx, remaining: Math.max(0, cum[idx + 1] - e), done: false, e }
+  }
 
-  // keep the screen awake while running
+  // wake lock while running
   useEffect(() => {
+    let released = false
     async function lock() {
       try { if (running && 'wakeLock' in navigator) wakeRef.current = await navigator.wakeLock.request('screen') } catch {}
     }
     lock()
-    return () => { try { wakeRef.current?.release?.(); wakeRef.current = null } catch {} }
+    const onVis = () => { if (document.visibilityState === 'visible' && running) lock() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { document.removeEventListener('visibilitychange', onVis); if (!released) { try { wakeRef.current?.release?.() } catch {} wakeRef.current = null } }
   }, [running])
 
   useEffect(() => {
     if (!running || finished) return
-    tick.current = setInterval(() => {
-      setElapsed((e) => e + 1)
-      setLeft((l) => {
-        if (l > 1) {
-          if (l <= 4) beep(660, 90) // 3-2-1 countdown ticks
-          return l - 1
-        }
-        // phase change
-        setIdx((i) => {
-          const ni = i + 1
-          if (ni >= intervals.length) {
-            setFinished(true); setRunning(false)
-            beep(990, 400); buzz([120, 60, 120])
-            return i
-          }
-          beep(intervals[ni].kind === 'walk' ? 440 : 880, 220); buzz(180)
-          setLeft(intervals[ni].sec)
-          return ni
-        })
-        return intervals[Math.min(idx + 1, intervals.length - 1)].sec
-      })
-    }, 1000)
-    return () => clearInterval(tick.current)
-  }, [running, finished, idx, intervals])
+    const id = setInterval(() => {
+      const d = derive()
+      if (d.done) {
+        accumMs.current = totalSec * 1000; skipMs.current = 0
+        setFinished(true); setRunning(false); beep(990, 400); buzz([120, 60, 120]); tick((x) => x + 1); return
+      }
+      if (d.idx !== lastIdx.current) {
+        lastIdx.current = d.idx; lastBeep.current = null
+        const k = intervals[d.idx].kind
+        beep(k === 'walk' || k === 'easy' ? 440 : 880, 220); buzz(180)
+      }
+      const r = Math.ceil(d.remaining)
+      if (r <= 3 && r >= 1 && r !== lastBeep.current) { lastBeep.current = r; beep(660, 90) }
+      tick((x) => x + 1)
+    }, 200)
+    return () => clearInterval(id)
+  }, [running, finished])
 
+  const startResume = () => { runStartedAt.current = Date.now(); setRunning(true); beep(880, 150) }
+  const pause = () => { accumMs.current += Date.now() - runStartedAt.current; setRunning(false) }
+  const toggle = () => (running ? pause() : startResume())
   const skip = () => {
-    if (idx + 1 >= intervals.length) { setFinished(true); setRunning(false); return }
-    setElapsed((e) => e + left)
-    const ni = idx + 1
-    setIdx(ni); setLeft(intervals[ni].sec)
+    const d = derive()
+    const boundary = cum[d.idx + 1]
+    const cur = elapsedMs() / 1000
+    skipMs.current += Math.max(0, boundary - cur) * 1000
+    lastIdx.current = -1 // force a phase-change beep on the next tick
+    if (elapsedMs() / 1000 >= totalSec) { accumMs.current = totalSec * 1000; setFinished(true); setRunning(false) }
+    tick((x) => x + 1)
   }
-  const start = () => { setRunning(true); beep(880, 150) }
+  const stop = () => { if (running) pause(); setFinished(true) }
 
+  const d = derive()
+  const phase = intervals[d.idx]
+  const next = intervals[d.idx + 1]
   const color = KIND_COLOR[phase.kind] || 'var(--lichen)'
-  const phaseElapsedFrac = (phase.sec - left) / phase.sec
+  const frac = phase.sec ? (phase.sec - d.remaining) / phase.sec : 0
+  const totalElapsed = Math.floor(elapsedMs() / 1000)
 
   return (
-    <div className="fixed inset-0 z-50 bg-bog flex flex-col safe-top safe-bottom">
+    <div className="fixed inset-0 z-50 bg-pitch flex flex-col safe-top safe-bottom" style={{ background: 'var(--pitch, #0A0A0B)' }}>
       <div className="flex items-center justify-between px-5 pt-6 pb-3">
         <div className="min-w-0">
           <p className="eyebrow">Guided run</p>
-          <p className="text-sm text-bone-dim truncate max-w-[70vw]">{title}</p>
+          <p className="text-sm text-ash truncate max-w-[70vw]" style={{ color: 'var(--ash,#8E9199)' }}>{title}</p>
         </div>
-        <button onClick={() => onClose()} className="text-bone-dim px-3 py-2 -mr-3 no-tap-highlight font-cond uppercase text-sm">Close</button>
+        <button onClick={onClose} className="text-ash px-3 py-2 -mr-3 no-tap-highlight font-cond uppercase text-sm" style={{ color: 'var(--ash,#8E9199)' }}>Close</button>
       </div>
 
       {finished ? (
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-          <div className="font-display uppercase text-4xl text-lichen mb-2">Done</div>
-          <p className="text-bone-dim mb-1">Total time</p>
-          <div className="font-display text-5xl mb-8">{mmss(elapsed)}</div>
-          <button onClick={() => onDone(Math.round(elapsed / 60))}
-            className="w-full max-w-xs py-4 rounded bg-blaze text-bog font-cond font-bold uppercase tracking-wide">
-            Log this run ({Math.max(1, Math.round(elapsed / 60))} min)
+          <div className="font-display uppercase text-5xl mb-2" style={{ color: 'var(--lichen)' }}>Done</div>
+          <p className="mb-1" style={{ color: 'var(--ash,#8E9199)' }}>Total time</p>
+          <div className="font-display text-6xl mb-8">{mmss(totalElapsed)}</div>
+          <button onClick={() => onDone(Math.max(1, Math.round(totalElapsed / 60)))}
+            className="w-full max-w-xs py-4 rounded font-cond font-bold uppercase tracking-wide" style={{ background: 'var(--blaze)', color: 'var(--pitch,#0A0A0B)' }}>
+            Log this run ({Math.max(1, Math.round(totalElapsed / 60))} min)
           </button>
-          <button onClick={() => onClose()} className="mt-3 text-bone-dim underline text-sm">Close without logging</button>
+          <button onClick={onClose} className="mt-3 underline text-sm" style={{ color: 'var(--ash,#8E9199)' }}>Close without logging</button>
         </div>
       ) : (
         <>
-          <div className="flex-1 flex flex-col items-center justify-center px-6" style={{ background: `radial-gradient(120% 60% at 50% 40%, ${color}22, transparent)` }}>
-            <p className="font-cond font-bold uppercase tracking-[.2em] text-sm mb-3" style={{ color }}>
-              {phase.label}
-            </p>
-            <div className="font-display leading-none" style={{ fontSize: '5.5rem', color }}>{mmss(left)}</div>
+          <div className="flex-1 flex flex-col items-center justify-center px-6" style={{ background: `radial-gradient(120% 55% at 50% 42%, ${color}22, transparent)` }}>
+            <p className="font-cond font-bold uppercase tracking-[.2em] text-sm mb-3" style={{ color }}>{phase.label}</p>
+            <div className="font-display leading-none tabular-nums" style={{ fontSize: '5.5rem', color }}>{mmss(Math.ceil(d.remaining))}</div>
             <div className="mt-6 w-full max-w-sm">
-              <div className="h-2 rounded-full bg-line overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${phaseElapsedFrac * 100}%`, background: color }} />
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--steel,#23262C)' }}>
+                <div className="h-full rounded-full" style={{ width: `${frac * 100}%`, background: color }} />
               </div>
-              <div className="flex justify-between text-[.72rem] text-bone-dim mt-2">
-                <span>Phase {idx + 1} / {intervals.length}</span>
-                <span>{mmss(elapsed)} / {mmss(total)}</span>
+              <div className="flex justify-between text-[.72rem] mt-2" style={{ color: 'var(--ash,#8E9199)' }}>
+                <span>Phase {d.idx + 1} / {intervals.length}</span>
+                <span>{mmss(totalElapsed)} / {mmss(totalSec)}</span>
               </div>
             </div>
-            {next && <p className="mt-6 text-sm text-bone-dim">Next: <b className="text-bone">{next.label}</b> · {mmss(next.sec)}</p>}
+            {next && <p className="mt-6 text-sm" style={{ color: 'var(--ash,#8E9199)' }}>Next: <b style={{ color: 'var(--bone)' }}>{next.label}</b> · {mmss(next.sec)}</p>}
           </div>
 
           <div className="px-6 pb-8 flex items-center justify-center gap-4">
-            <button onClick={skip} className="w-16 h-16 rounded-full border border-line flex items-center justify-center text-bone-dim no-tap-highlight" aria-label="Skip phase">
+            <button onClick={skip} className="w-16 h-16 rounded-full border flex items-center justify-center no-tap-highlight" style={{ borderColor: 'var(--steel,#23262C)', color: 'var(--ash,#8E9199)' }} aria-label="Skip phase">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5l9 7-9 7zM17 5h2v14h-2z" /></svg>
             </button>
-            <button onClick={() => (running ? setRunning(false) : start())}
-              className="w-24 h-24 rounded-full bg-blaze text-bog flex items-center justify-center no-tap-highlight" aria-label={running ? 'Pause' : 'Start'}>
+            <button onClick={toggle} className="w-24 h-24 rounded-full flex items-center justify-center no-tap-highlight" style={{ background: 'var(--blaze)', color: 'var(--pitch,#0A0A0B)' }} aria-label={running ? 'Pause' : 'Start'}>
               {running
                 ? <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>
                 : <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l12 7-12 7z" /></svg>}
             </button>
-            <button onClick={() => { setFinished(true); setRunning(false) }} className="w-16 h-16 rounded-full border border-line flex items-center justify-center text-bone-dim no-tap-highlight" aria-label="Finish">
+            <button onClick={stop} className="w-16 h-16 rounded-full border flex items-center justify-center no-tap-highlight" style={{ borderColor: 'var(--steel,#23262C)', color: 'var(--ash,#8E9199)' }} aria-label="Finish">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
             </button>
           </div>

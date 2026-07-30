@@ -36,7 +36,7 @@ export function StatusPill({ mark }) {
   )
 }
 
-export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev, label, titleOverride, onRemove, onGuided }) {
+export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev, label, titleOverride, onRemove }) {
   const [showBackup, setShowBackup] = useState(false)
   const [showLog, setShowLog] = useState(false)
   const [showMods, setShowMods] = useState(false)

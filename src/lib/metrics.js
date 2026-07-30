@@ -48,7 +48,7 @@ export function anyModified(log) {
 
 // ---- previous-value lookup (for placeholders) + progress series ----
 // Index every logged value by movement/kind so we can find "last time".
-export function buildLogIndex(weeks, logs, bonus = {}) {
+export function buildLogIndex(weeks, logs, extra = {}) {
   const map = { run: [], circuit: [] } // map['str|<movement>'] = [{week,n,w}]
   const push = (k, v) => { (map[k] ||= []).push(v) }
   const ingest = (weekNum, kind, log, exercises) => {
@@ -66,7 +66,7 @@ export function buildLogIndex(weeks, logs, bonus = {}) {
     ingest(w.week, 'run', logs[`${w.week}:run`])
     ingest(w.week, 'circuit', logs[`${w.week}:circuit`])
     ingest(w.week, 'strength', logs[`${w.week}:strength`], w.strength?.exercises)
-    for (const b of bonus[w.week] || []) {
+    for (const b of extra[w.week] || []) {
       const ex = b.kind === 'strength' ? w.strength?.exercises : undefined
       ingest(w.week, b.kind, logs[`${w.week}:${b.id}`], ex)
     }

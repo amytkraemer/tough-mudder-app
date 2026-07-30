@@ -19,7 +19,7 @@ export function defaultData() {
     },
     marks: {},                // "<week>:<session>" -> done|backup|partial|missed
     logs: {},                 // "<week>:<session>" -> performance details
-    bonus: {},                // "<week>" -> [ { id, kind, n } ] extra sessions
+    extra: {},                // "<week>" -> [ { id, kind, n, preset? } ] extra sessions
     hangs: [],                // { id, date, seconds, grip, notes }
   }
 }
@@ -37,13 +37,15 @@ export function loadData() {
 
 function migrate(data) {
   const d = defaultData()
+  const { bonus, ...rest } = data // drop the legacy "bonus" key
   return {
     ...d,
-    ...data,
+    ...rest,
     settings: { ...d.settings, ...(data.settings || {}) },
     marks: data.marks || {},
     logs: data.logs || {},
-    bonus: data.bonus || {},
+    // migrate the former "bonus" key to "extra" with no data loss
+    extra: data.extra || bonus || {},
     hangs: Array.isArray(data.hangs) ? data.hangs : [],
     version: CURRENT_VERSION,
   }

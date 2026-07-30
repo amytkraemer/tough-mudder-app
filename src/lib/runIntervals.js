@@ -30,9 +30,20 @@ export function parseRun(str) {
   m = s.match(/([\d.]+)\s*min continuous,\s*walk\s*([\d.]+),\s*then\s*([\d.]+)\s*min continuous/i)
   if (m) { add('Run', +m[1] * 60, 'run'); add('Walk', +m[2] * 60, 'walk'); add('Run', +m[3] * 60, 'run'); return finalize(phases) }
 
+  // "N(-M) min easy, plus P min at X% incline mid-run" -> easy / incline / easy
+  m = s.match(/([\d.]+)(?:-[\d.]+)?\s*min easy,\s*plus\s*([\d.]+)\s*min at\s*(\d+(?:-\d+)?%)\s*incline/i)
+  if (m) {
+    const total = +m[1], inc = +m[2], pct = m[3]
+    const side = Math.max(1, (total - inc) / 2)
+    add('Easy', side * 60, 'easy')
+    add(`Incline ${pct}`, inc * 60, 'incline')
+    add('Easy', side * 60, 'easy')
+    return finalize(phases)
+  }
+
   // "Incline intervals: A min at ... / B min flat, x K"
-  m = s.match(/([\d.]+)\s*min at [^/]*\/\s*([\d.]+)\s*min flat[^x]*x\s*(\d+)/i)
-  if (m) { const a = +m[1], b = +m[2], k = +m[3]; for (let i = 0; i < k; i++) { add('Hard · incline', a * 60, 'hard'); add('Easy · flat', b * 60, 'easy') } return finalize(phases) }
+  m = s.match(/([\d.]+)\s*min at ([\d%-]+)[^/]*\/\s*([\d.]+)\s*min flat[^x]*x\s*(\d+)/i)
+  if (m) { const a = +m[1], pct = m[2], b = +m[3], k = +m[4]; for (let i = 0; i < k; i++) { add(`Incline ${pct}`, a * 60, 'incline'); add('Easy · flat', b * 60, 'easy') } return finalize(phases) }
 
   // "K x N sec hard uphill, walk down"
   m = s.match(/(\d+)\s*x\s*([\d.]+)\s*sec hard uphill/i)

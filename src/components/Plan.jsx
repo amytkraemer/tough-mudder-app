@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { computeStats } from '../lib/stats.js'
 import { buildLogIndex, prevFor } from '../lib/metrics.js'
 import { markKey } from '../lib/storage.js'
-import BonusArea from './BonusArea.jsx'
+import ExtraArea from './ExtraArea.jsx'
 import { PHASES } from '../data/plan.js'
 import SessionCard, { StatusPill } from './SessionCard.jsx'
 
@@ -31,11 +31,11 @@ function SessionMini({ kind, mark }) {
   )
 }
 
-export default function Plan({ schedule, data, setMark, setLog, addBonus, removeBonus }) {
+export default function Plan({ schedule, data, setMark, setLog, addExtra, removeExtra }) {
   const { weeks, currentIndex, daysToRace } = schedule
   const current = weeks[currentIndex]
   const stats = computeStats({ weeks, marks: data.marks })
-  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.bonus), [weeks, data.logs, data.bonus])
+  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.extra), [weeks, data.logs, data.extra])
 
   const [openPhases, setOpenPhases] = useState(() => ({ [current.phaseId]: true }))
   const [openWeek, setOpenWeek] = useState(current.week)
@@ -146,14 +146,14 @@ export default function Plan({ schedule, data, setMark, setLog, addBonus, remove
                                 prev={prevFor(logIndex, w.week, s, w)}
                               />
                             ))}
-                            <BonusArea
+                            <ExtraArea
                               week={w}
                               data={data}
                               logIndex={logIndex}
                               setMark={setMark}
                               setLog={setLog}
-                              addBonus={addBonus}
-                              removeBonus={removeBonus}
+                              addExtra={addExtra}
+                              removeExtra={removeExtra}
                               daysPerWeek={data.settings.daysPerWeek}
                             />
                           </div>
