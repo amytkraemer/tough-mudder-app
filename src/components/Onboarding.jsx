@@ -5,7 +5,7 @@ import { BEGINNER_VOLUME_WARNING } from '../data/overlays.js'
 
 const HATCH = {
   backgroundImage:
-    'repeating-linear-gradient(135deg, rgba(242,163,60,.06) 0 2px, transparent 2px 9px)',
+    'repeating-linear-gradient(135deg, rgba(255,106,19,.06) 0 2px, transparent 2px 9px)',
 }
 
 export default function Onboarding({ onDone, sync }) {
@@ -87,7 +87,7 @@ export default function Onboarding({ onDone, sync }) {
               </button>
             ))}
             <p className="col-span-4 text-sm text-bone-dim mt-1">
-              The plan is 3 core sessions a week. Extra days become daily dead-hang and easy movement.
+              3 core sessions stay fixed. Extra days add overlays in order: 4 Grip &amp; Pull · 5 Easy Run 2 · 6 Mobility &amp; Carry.
             </p>
           </div>
         )}

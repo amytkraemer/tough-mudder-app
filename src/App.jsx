@@ -102,7 +102,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-bog text-bone">
+    <div className="min-h-screen bg-pitch text-bone">
+      <div className="grain" aria-hidden="true" />
       <div className="mx-auto max-w-[760px]" style={{ paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}>
         {tab === 'today' && (
           <Today

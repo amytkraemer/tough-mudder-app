@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { EX_GROUPS, EX_FILTERS } from '../data/exercises.js'
 
 const SPINE = { lichen: 'var(--lichen)', clay: 'var(--clay)', blaze: 'var(--blaze)' }
-const HATCH = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(242,163,60,.045) 0 2px, transparent 2px 9px)' }
+const HATCH = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,106,19,.045) 0 2px, transparent 2px 9px)' }
 
 export default function Exercises({ data, update }) {
   const [filter, setFilter] = useState('all')
@@ -80,7 +80,7 @@ export default function Exercises({ data, update }) {
                       {c.tags.map((t, i) => (
                         <span key={i}
                           className="font-cond font-semibold uppercase text-[.62rem] tracking-wider px-1.5 py-0.5 rounded"
-                          style={t.c === 'grip' ? { background: 'rgba(242,163,60,.16)', color: 'var(--blaze)' }
+                          style={t.c === 'grip' ? { background: 'rgba(255,106,19,.16)', color: 'var(--blaze)' }
                             : t.c === 'pull' ? { background: 'rgba(127,169,134,.16)', color: 'var(--lichen)' }
                             : { background: 'var(--surface-2)', color: 'var(--bone-dim)' }}>
                           {t.t}

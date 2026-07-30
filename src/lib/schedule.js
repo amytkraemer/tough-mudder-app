@@ -246,12 +246,13 @@ export function buildSchedule({ raceDate, runningBase = 'none', daysPerWeek = 3,
   }
 }
 
-// Suggested weekday layout for the three sessions (spaced out, never stacked).
+// Suggested weekday layout, spaced out (never two quality days back to back).
+// Overlay days follow the fixed order: 4 Grip & Pull, 5 Easy Run 2, 6 Mobility.
 const DAY_PLANS = {
   3: [{ d: 'Mon', k: 'run' }, { d: 'Wed', k: 'strength' }, { d: 'Fri', k: 'circuit' }],
-  4: [{ d: 'Mon', k: 'run' }, { d: 'Wed', k: 'strength' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'hang' }],
-  5: [{ d: 'Mon', k: 'run' }, { d: 'Tue', k: 'hang' }, { d: 'Wed', k: 'strength' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'hang' }],
-  6: [{ d: 'Mon', k: 'run' }, { d: 'Tue', k: 'hang' }, { d: 'Wed', k: 'strength' }, { d: 'Thu', k: 'hang' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'hang' }],
+  4: [{ d: 'Mon', k: 'run' }, { d: 'Wed', k: 'strength' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'grip' }],
+  5: [{ d: 'Mon', k: 'run' }, { d: 'Tue', k: 'run2' }, { d: 'Wed', k: 'strength' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'grip' }],
+  6: [{ d: 'Mon', k: 'run' }, { d: 'Tue', k: 'run2' }, { d: 'Wed', k: 'strength' }, { d: 'Thu', k: 'mobility' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'grip' }],
 }
 export function dayPlan(daysPerWeek) {
   return DAY_PLANS[daysPerWeek] || DAY_PLANS[3]

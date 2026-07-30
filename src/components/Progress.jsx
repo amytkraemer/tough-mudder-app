@@ -6,7 +6,7 @@ import {
 } from '../lib/metrics.js'
 import Chart from './Chart.jsx'
 
-const HATCH = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(242,163,60,.05) 0 2px, transparent 2px 9px)' }
+const HATCH = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,106,19,.05) 0 2px, transparent 2px 9px)' }
 
 function Card({ title, right, children }) {
   return (
@@ -109,7 +109,7 @@ export default function Progress({ schedule, data }) {
                 <p className="text-[.78rem] text-bone-dim mb-2">Movements you last did modified. When these feel easy, do the full version and uncheck “Modified”.</p>
                 <div className="flex flex-wrap gap-1.5">
                   {scaling.map((s) => (
-                    <span key={s.name} className="font-cond font-semibold uppercase text-[.66rem] tracking-wide px-2 py-1 rounded" style={{ background: 'rgba(242,163,60,.16)', color: 'var(--blaze)' }}>
+                    <span key={s.name} className="font-cond font-semibold uppercase text-[.66rem] tracking-wide px-2 py-1 rounded" style={{ background: 'rgba(255,106,19,.16)', color: 'var(--blaze)' }}>
                       {s.name}
                     </span>
                   ))}

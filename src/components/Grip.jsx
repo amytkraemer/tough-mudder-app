@@ -4,7 +4,7 @@ import { GRIP_TYPES } from '../data/plan.js'
 import { fmtISO } from '../lib/schedule.js'
 import LineChart from './LineChart.jsx'
 
-const HATCH = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(242,163,60,.05) 0 2px, transparent 2px 9px)' }
+const HATCH = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,106,19,.05) 0 2px, transparent 2px 9px)' }
 
 export default function Grip({ data, update }) {
   const hangs = data.hangs
