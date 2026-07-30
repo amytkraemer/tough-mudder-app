@@ -4,6 +4,7 @@ import { downloadBackup, importJSON } from '../lib/storage.js'
 import { BEGINNER_VOLUME_WARNING } from '../data/overlays.js'
 
 const STATUS_LABEL = {
+  init: { t: 'Connecting…', c: 'var(--blaze)' },
   syncing: { t: 'Syncing…', c: 'var(--blaze)' },
   synced: { t: 'Synced to cloud', c: 'var(--lichen)' },
   error: { t: 'Sync error — will retry', c: 'var(--alarm)' },
@@ -11,9 +12,17 @@ const STATUS_LABEL = {
   disabled: { t: '', c: 'var(--bone-dim)' },
 }
 
+function fmtSynced(ts) {
+  if (!ts) return null
+  try {
+    return new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  } catch { return null }
+}
+
 function SyncSection({ sync }) {
   if (!sync || !sync.enabled) return null
   const st = STATUS_LABEL[sync.status] || STATUS_LABEL['signed-out']
+  const syncedAt = fmtSynced(sync.lastSyncedAt)
   return (
     <section className="mb-6">
       <p className="font-cond font-bold uppercase text-[.62rem] tracking-wider text-bone-dim mb-3">Cloud sync</p>
@@ -26,6 +35,7 @@ function SyncSection({ sync }) {
             <div className="flex-1 min-w-0">
               <div className="text-sm truncate">{sync.user.displayName || sync.user.email}</div>
               <div className="text-[.72rem]" style={{ color: st.c }}>● {st.t}</div>
+              {syncedAt && <div className="text-[.68rem] text-bone-dim mt-0.5">Last synced {syncedAt}</div>}
             </div>
           </div>
           <button onClick={sync.signOut} className="w-full mt-3 py-2.5 rounded border border-line text-bone font-cond font-bold uppercase text-sm tracking-wide">
@@ -101,7 +111,7 @@ export default function Settings({ data, update, sync, onClose }) {
 
   const resetAll = () => {
     if (!confirm('Erase all your data on this device and start over? This cannot be undone. Export a backup first if you want to keep it.')) return
-    update((d) => { d.settings.onboarded = false; d.marks = {}; d.hangs = []; return d })
+    update((d) => { d.settings.onboarded = false; d.marks = {}; d.hangs = {}; return d })
     onClose()
   }
 

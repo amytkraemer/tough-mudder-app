@@ -19,6 +19,12 @@ export default function App() {
   const today = useMemo(() => new Date(), [])
   const sync = useCloudSync(data, setData)
 
+  // Latch: once cloud has bootstrapped (auth resolved + signed-in user's doc
+  // fetched) the app renders and stays rendered. A later sign-in merges in the
+  // background without flashing the loading screen again.
+  const [booted, setBooted] = useState(!sync.enabled)
+  useEffect(() => { if (sync.ready) setBooted(true) }, [sync.ready])
+
   // Persist on every change.
   useEffect(() => { saveData(data) }, [data])
 
@@ -88,6 +94,19 @@ export default function App() {
       return d
     })
   }, [update])
+
+  // Never decide onboarding from local storage before cloud has loaded — a
+  // returning user's plan and progress live in Firestore, not in a fresh
+  // browser's empty localStorage. Show a loading state, never onboarding.
+  if (!booted) {
+    return (
+      <div className="min-h-screen bg-bog text-bone flex flex-col items-center justify-center gap-4">
+        <div className="grain" aria-hidden="true" />
+        <div className="h-8 w-8 rounded-full border-2 border-line border-t-blaze animate-spin" />
+        <p className="font-cond uppercase tracking-wider text-[.7rem] text-bone-dim">Restoring your training…</p>
+      </div>
+    )
+  }
 
   if (!data.settings.onboarded) {
     return (
