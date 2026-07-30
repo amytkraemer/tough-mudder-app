@@ -3,45 +3,32 @@ import {
   firebaseEnabled, onAuth, signIn as fbSignIn, signOutUser,
   fetchRemote, writeRemote, subscribeRemote, deleteRemote,
 } from './firebase.js'
-import { CURRENT_VERSION, hangsToObject, defaultData } from './storage.js'
+import { CURRENT_VERSION, hangsToObject, defaultData, migrate } from './storage.js'
+import { mergeStates, emptyMeta, staleTombstonePaths } from './lww.js'
 
-// Only these fields sync. UI-only state stays local.
+// Only these fields sync. UI-only state stays local. clock/tombstones travel
+// with the data so last-write-wins + deletions work across devices.
 function pick(d) {
-  return { settings: d.settings, marks: d.marks || {}, logs: d.logs || {}, extra: d.extra || {}, hangs: hangsToObject(d.hangs) }
-}
-
-// Per-key merge so two devices editing DIFFERENT weeks (or logging different
-// hangs) both survive a reconnect instead of one wiping the other. marks/logs/
-// extra are id-keyed maps; hangs is now an id-keyed object. On a same-key
-// conflict, the remote (last confirmed server value) wins — an accepted
-// trade-off that resolves virtually every real-world conflict.
-// normalize a doc that may be in the old shape (legacy "bonus" key, hangs array)
-function norm(x) {
-  const s = x || {}
   return {
-    settings: s.settings || {},
-    marks: s.marks || {},
-    logs: s.logs || {},
-    extra: s.extra || s.bonus || {},   // migrate legacy "bonus"
-    hangs: hangsToObject(s.hangs),      // migrate legacy array
+    settings: d.settings,
+    marks: d.marks || {}, logs: d.logs || {}, extra: d.extra || {}, hangs: hangsToObject(d.hangs),
+    clock: d.clock || emptyMeta(), tombstones: d.tombstones || emptyMeta(),
   }
 }
 
+// migrate() shape-normalizes any doc (legacy "bonus" key, hangs array, missing
+// clock/tombstones) so both sides of a merge are in the current shape.
 export function mergeData(local, remote) {
-  const l = norm(local)
-  if (!remote) return { version: CURRENT_VERSION, ...l }
-  const r = norm(remote)
+  const l = migrate(local || {})
+  if (!remote) return l
+  const r = migrate(remote)
   const settings = r.settings?.onboarded
     ? { ...l.settings, ...r.settings }   // adopt the already-onboarded plan
     : { ...r.settings, ...l.settings }   // local is the real one
-  return {
-    version: CURRENT_VERSION,
-    settings,
-    marks: { ...l.marks, ...r.marks },
-    logs: { ...l.logs, ...r.logs },
-    extra: { ...l.extra, ...r.extra },
-    hangs: { ...l.hangs, ...r.hangs },   // merge by id — never drops entries
-  }
+  // Last-write-wins per item, honoring tombstones so a deletion on one device
+  // sticks instead of being re-added from the other's stale copy.
+  const merged = mergeStates(l, r)
+  return { version: CURRENT_VERSION, settings, ...merged }
 }
 
 // --- Pure decision helpers (exported for tests) ----------------------------
@@ -87,10 +74,13 @@ export function useCloudSync(data, setData) {
   const writeTimer = useRef(null)
   const dataRef = useRef(data)
   dataRef.current = data
+  // Last remote doc we've seen, so the push can GC tombstones the cloud still holds.
+  const remoteRef = useRef(null)
 
   // A live snapshot arrived: merge it into local per-key so unpushed local edits
   // aren't wiped.
   const applyRemote = useCallback((remoteData) => {
+    remoteRef.current = remoteData
     const next = mergeData(dataRef.current, remoteData)
     if (JSON.stringify(pick(next)) === JSON.stringify(pick(dataRef.current))) return
     applyingRemote.current = true
@@ -138,6 +128,7 @@ export function useCloudSync(data, setData) {
     ;(async () => {
       try {
         const remote = await fetchRemote(user.uid)
+        remoteRef.current = remote
         const merged = mergeData(dataRef.current, remote)
         applyingRemote.current = true
         setData(() => merged)
@@ -175,7 +166,10 @@ export function useCloudSync(data, setData) {
     if (writeTimer.current) clearTimeout(writeTimer.current)
     setStatus('syncing')
     writeTimer.current = setTimeout(() => {
-      writeRemote(user.uid, pick(dataRef.current))
+      // Clean up tombstones the cloud doc still holds past the TTL (a merge write
+      // can't remove them, so delete those fields explicitly).
+      const gc = staleTombstonePaths(remoteRef.current?.tombstones)
+      writeRemote(user.uid, pick(dataRef.current), gc)
         .then(() => { setStatus('synced'); setLastSyncedAt(Date.now()) })
         .catch(() => setStatus('error'))
     }, 700)

@@ -70,12 +70,25 @@ export async function fetchRemote(uid) {
   return snap.exists() ? snap.data() : null
 }
 
-export async function writeRemote(uid, payload) {
+export async function writeRemote(uid, payload, gcPaths = []) {
   const fb = await ensure()
-  const { doc, setDoc, serverTimestamp } = await import('firebase/firestore')
+  const { doc, setDoc, serverTimestamp, deleteField } = await import('firebase/firestore')
+  const body = { ...payload, updatedAt: serverTimestamp() }
+  // Expired tombstones can't be removed by a merge write (merge never deletes
+  // keys), so delete those specific nested fields explicitly to keep the doc
+  // from accumulating tombstones forever. setDoc does NOT treat dotted keys as
+  // field paths, so build the nested {tombstones:{field:{key: deleteField()}}}.
+  for (const path of gcPaths) {
+    const rest = path.slice(path.indexOf('.') + 1)      // "field.key"
+    const field = rest.slice(0, rest.indexOf('.'))
+    const key = rest.slice(rest.indexOf('.') + 1)
+    body.tombstones = body.tombstones || {}
+    body.tombstones[field] = { ...(body.tombstones[field] || {}) }
+    body.tombstones[field][key] = deleteField()
+  }
   // merge:true does a recursive map merge, so a device pushing its state never
   // deletes keys (other weeks' marks/logs, other hangs) it doesn't know about.
-  await setDoc(doc(fb.db, 'users', uid), { ...payload, updatedAt: serverTimestamp() }, { merge: true })
+  await setDoc(doc(fb.db, 'users', uid), body, { merge: true })
 }
 
 // Intentional, full delete of the user's cloud document. This is the ONLY path

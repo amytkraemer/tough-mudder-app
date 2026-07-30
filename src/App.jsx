@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { loadData, saveData } from './lib/storage.js'
+import { stamp, tomb } from './lib/lww.js'
 import { buildSchedule } from './lib/schedule.js'
 import { useCloudSync } from './lib/sync.js'
 import Onboarding from './components/Onboarding.jsx'
@@ -54,8 +55,8 @@ export default function App() {
   const setMark = useCallback((week, session, value) => {
     update((d) => {
       const key = `${week}:${session}`
-      if (d.marks[key] === value) delete d.marks[key]
-      else d.marks[key] = value
+      if (d.marks[key] === value) { delete d.marks[key]; tomb(d, 'marks', key) } // un-check = deletion
+      else { d.marks[key] = value; stamp(d, 'marks', key) }
       return d
     })
   }, [update])
@@ -66,7 +67,9 @@ export default function App() {
     update((d) => {
       const list = d.extra[week] || []
       const n = list.reduce((m, b) => Math.max(m, b.n || 0), 0) + 1
-      d.extra[week] = [...list, { id: `extra-${preset || kind}-${n}`, kind, n, preset }]
+      const id = `extra-${preset || kind}-${n}`
+      d.extra[week] = [...list, { id, kind, n, preset }]
+      stamp(d, 'extra', `${week}:${id}`)
       return d
     })
   }, [update])
@@ -77,6 +80,10 @@ export default function App() {
       if (!d.extra[week].length) delete d.extra[week]
       delete d.marks[`${week}:${id}`]
       delete d.logs[`${week}:${id}`]
+      // tombstone the extra AND its cascaded mark/log so none is re-added on sync
+      tomb(d, 'extra', `${week}:${id}`)
+      tomb(d, 'marks', `${week}:${id}`)
+      tomb(d, 'logs', `${week}:${id}`)
       return d
     })
   }, [update])
@@ -91,6 +98,7 @@ export default function App() {
         for (const i in patch.ex) next.ex[i] = { ...(cur.ex?.[i] || {}), ...patch.ex[i] }
       }
       d.logs[key] = next
+      stamp(d, 'logs', key)
       return d
     })
   }, [update])

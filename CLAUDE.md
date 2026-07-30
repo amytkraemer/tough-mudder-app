@@ -28,8 +28,28 @@ this file is for things that will bite you if you don't know them.
   `storage.migrate()` and `sync.norm()`; both tolerate old-shape localStorage,
   imported JSON, and Firestore docs. `loadData()` writes the migrated shape back so
   migration doesn't re-run on every load.
-- Sync is **per-key shallow merge** (`sync.mergeData`), never whole-document
-  overwrite. `firebase.writeRemote` uses `setDoc(..., { merge: true })`.
+- Sync is **last-write-wins per item with tombstones** (`sync.mergeData` →
+  `lib/lww.js`), never whole-document overwrite. `firebase.writeRemote` uses
+  `setDoc(..., { merge: true })`.
+  - Every synced item carries a timestamp in `data.clock` (`{marks,logs,hangs,extra}`
+    → `{key: ms}`); every deletion leaves a `data.tombstones` entry keyed the same
+    way. `extra` uses composite keys `"<week>:<id>"`. Merge picks the most recent
+    of {live edit, deletion} per item — so un-checking a mark, removing an extra,
+    or deleting a hang **sticks across devices** instead of being re-added.
+  - **Edit sites must stamp:** call `stamp(d, field, key)` when you add/edit an
+    item and `tomb(d, field, key)` when you delete one (see `App.jsx` setMark/
+    setLog/addExtra/removeExtra and `Grip.jsx`). A mutation that skips this won't
+    sync its create/delete correctly.
+  - Pre-LWW items (no clock) are backfilled to `LEGACY_TS` in `normalizeMeta`, so
+    any real edit/delete outranks them. Tombstones are GC'd after
+    `TOMBSTONE_TTL_MS` (90d): pruned locally in `normalizeMeta`, and removed from
+    the cloud doc via nested `deleteField` in `writeRemote` (setDoc does NOT treat
+    dotted keys as field paths — build the nested object).
+  - **Import** replaces current data under LWW (`importInto`): entries the backup
+    omits are tombstoned at import time so the cloud can't silently re-add them.
+- Emulator tests share ONE Firestore instance and `clearFirestore()` in
+  `beforeEach`, so `vitest.rules.config.js` forces serial execution
+  (`fileParallelism: false`). Don't re-enable parallelism for `*.emulator.test.js`.
 
 ## Completion math
 - **Core completion** = the fixed 3-day spine only; denominator is always 141

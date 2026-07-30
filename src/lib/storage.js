@@ -1,6 +1,8 @@
 // localStorage persistence. Everything lives under one key so export/import is
 // a single JSON blob — that export is the only backup.
 
+import { normalizeMeta, emptyMeta } from './lww.js'
+
 const KEY = 'tm.data.v1'
 export const CURRENT_VERSION = 2
 
@@ -21,6 +23,8 @@ export function defaultData() {
     logs: {},                 // "<week>:<session>" -> performance details
     extra: {},                // "<week>" -> [ { id, kind, n, preset? } ] extra sessions
     hangs: {},                // id -> { id, date, seconds, grip, notes }
+    clock: emptyMeta(),       // per-item last-write time (LWW sync)
+    tombstones: emptyMeta(),  // per-item deletion time (LWW sync)
   }
 }
 
@@ -51,13 +55,14 @@ export function loadData() {
 }
 
 function needsWriteback(parsed) {
-  return parsed?.version !== CURRENT_VERSION || Array.isArray(parsed?.hangs) || (parsed && 'bonus' in parsed)
+  return parsed?.version !== CURRENT_VERSION || Array.isArray(parsed?.hangs) ||
+    (parsed && 'bonus' in parsed) || !parsed?.clock || !parsed?.tombstones
 }
 
 export function migrate(data) {
   const d = defaultData()
   const { bonus, ...rest } = data || {} // drop the legacy "bonus" key
-  return {
+  const migrated = {
     ...d,
     ...rest,
     settings: { ...d.settings, ...(data?.settings || {}) },
@@ -67,8 +72,12 @@ export function migrate(data) {
     // object, both with no data loss
     extra: data?.extra || bonus || {},
     hangs: hangsToObject(data?.hangs),
+    clock: data?.clock || emptyMeta(),
+    tombstones: data?.tombstones || emptyMeta(),
     version: CURRENT_VERSION,
   }
+  // Backfill clocks for pre-LWW items and drop expired tombstones.
+  return normalizeMeta(migrated)
 }
 
 export function saveData(data) {

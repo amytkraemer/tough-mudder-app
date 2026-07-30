@@ -32,11 +32,11 @@ describe('sync per-key merge (item 4): two devices cannot wipe each other', () =
     expect(merged.hangs.y.seconds).toBe(35)
   })
 
-  it('same-key conflict resolves to remote but never drops a local-only key', () => {
-    const a = { ...base(), marks: { '1:run': 'partial', '3:run': 'done' } }
-    const b = { ...base(), marks: { '1:run': 'done' } }
+  it('same-key conflict resolves to the NEWER write (LWW), never drops a local-only key', () => {
+    const a = { ...base(), marks: { '1:run': 'partial', '3:run': 'done' }, clock: { ...base().clock, marks: { '1:run': 100, '3:run': 100 } } }
+    const b = { ...base(), marks: { '1:run': 'done' }, clock: { ...base().clock, marks: { '1:run': 200 } } } // newer
     const merged = mergeData(a, b)
-    expect(merged.marks['1:run']).toBe('done') // remote wins the conflict
+    expect(merged.marks['1:run']).toBe('done') // newer write wins the conflict
     expect(merged.marks['3:run']).toBe('done') // local-only key preserved
   })
 

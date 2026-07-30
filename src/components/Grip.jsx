@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { stamp, tomb } from '../lib/lww.js'
 import { hangStats, hangsArray } from '../lib/stats.js'
 import { GRIP_TYPES } from '../data/plan.js'
 import { fmtISO } from '../lib/schedule.js'
@@ -21,12 +22,13 @@ export default function Grip({ data, update }) {
       // unique id so per-id sync merge never collides two devices' entries
       const id = `${date}-${Math.round(s)}-${Math.round(performance.now())}-${Object.keys(d.hangs).length}`
       d.hangs[id] = { id, date, seconds: s, grip, notes: notes.trim() }
+      stamp(d, 'hangs', id)
       return d
     })
     setSeconds(''); setNotes('')
   }
 
-  const remove = (id) => update((d) => { delete d.hangs[id]; return d })
+  const remove = (id) => update((d) => { delete d.hangs[id]; tomb(d, 'hangs', id); return d })
 
   const sortedDesc = hangList.slice().sort((a, b) => (a.date < b.date ? 1 : -1))
 

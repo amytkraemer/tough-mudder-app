@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { RUNNING_BASE, buildSchedule } from '../lib/schedule.js'
-import { downloadBackup, importJSON } from '../lib/storage.js'
+import { downloadBackup, migrate, CURRENT_VERSION } from '../lib/storage.js'
+import { importInto } from '../lib/lww.js'
 import { BEGINNER_VOLUME_WARNING } from '../data/overlays.js'
 
 const STATUS_LABEL = {
@@ -98,8 +99,11 @@ export default function Settings({ data, update, sync, onClose }) {
     if (!file) return
     try {
       const text = await file.text()
-      const next = importJSON(text)
-      update(() => next)
+      const backup = migrate(JSON.parse(text))
+      // Replace current data with the backup under LWW: entries the backup omits
+      // are tombstoned (at import time) so the cloud can't silently re-add them,
+      // rather than merged additively.
+      update((cur) => ({ ...importInto(cur, backup), version: CURRENT_VERSION }))
       setImportMsg({ ok: true, text: 'Backup imported.' })
       setTimeout(onClose, 700)
     } catch (err) {
