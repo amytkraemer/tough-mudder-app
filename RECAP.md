@@ -1,90 +1,139 @@
-# Tough Mudder 5K Training App — Full Recap for Review
+# Tough Mudder 5K Training App — Full Recap for Review (v2)
 
-A complete summary of what has been built, how it works, and the areas most
-worth reviewing for errors/issues. Hand this to a reviewer (human or AI) to
-audit the work and suggest corrections.
+Updated after a three-part overhaul (stabilization → multi-day/library/scaling
+→ design). Hand this to a reviewer to audit the work.
 
 ## 1. What it is
-A single-user (multi-account) **installable PWA** that combines three source
-files — a 47-week Tough Mudder 5K training plan (PDF), an xlsx tracker, and an
-exercise-guide HTML — into one offline-capable mobile web app.
+An installable, offline-capable PWA that combines a 47-week Tough Mudder 5K
+training plan (PDF), an xlsx tracker, and an exercise guide (HTML) into one
+mobile app, with optional per-account cloud sync.
 
 - **Live URL:** https://amytkraemer.github.io/tough-mudder-app/
-- **Repo/branch:** `amytkraemer/tough-mudder-app` @ `claude/tough-mudder-training-app-ylr943`
-- **Deploy:** GitHub Pages serving `/docs` from the feature branch (base path `/tough-mudder-app/`)
-- **Stack:** Vite 6 + React 18 + Tailwind 3, `vite-plugin-pwa` (Workbox), Firebase 12 (Auth + Firestore) for optional sync. No custom backend.
-- **Fonts:** Archivo Black / Barlow / Barlow Semi Condensed, **self-hosted** (vendored woff2) so it works offline. Palette/typography copied verbatim from the exercise guide's CSS custom properties.
-- **Size:** ~3,400 LOC; main bundle ~247KB; Firebase split into lazy chunks (largest ~611KB Firestore, only loaded when signed in).
+- **Deploy:** GitHub Pages, **`main` branch `/docs`** (no longer a feature branch).
+- **Stack:** Vite 6 + React 18 + Tailwind 3, `vite-plugin-pwa` (Workbox),
+  Firebase 12 (Auth + Firestore). **Vitest** for tests. No custom backend.
+- **Fonts (self-hosted woff2, offline-safe):** Big Shoulders Display (display),
+  Barlow (body), Barlow Semi Condensed (labels).
 
-## 2. Views (5 bottom tabs)
-1. **Today** — current training week (computed from today + race date), the 3 sessions with exact prescriptions, big Done/Backup/Partial/Missed targets, day-plan chips, bonus sessions + "Add a session".
-2. **Plan** — pinned stats (days to race, done vs scheduled, completion %, backup share), per-phase progress bars, collapsible phases (current auto-expanded), every week expandable to full session cards.
-3. **Moves** (Exercises) — the exercise guide ported as-is: session filter chips, hotel-mode toggle, all cues/mistakes/Watch links.
-4. **Grip** — dead-hang logger (date/seconds/grip/notes), PR, rolling avg, line chart, 60s/90s benchmarks.
-5. **Progress** — days/completion/streak; running trend (distance/time toggle); per-lift weight/reps chart with movement picker; dead-hang chart; "still scaling" list; consistency breakdown.
+## 2. Views (5 tabs) + screens
+Today, Plan, Moves (exercise guide), Grip (dead-hang log), Progress. Plus
+Onboarding (3 questions once), Settings, a monthly export nudge, and a
+full-screen guided-run timer.
 
-Plus: **Onboarding** (3 questions, once), **Settings** (change race date/days/running base → recalculates; Export/Import JSON; sign in/out; reset), **monthly export nudge**.
-
-## 3. Feature capabilities
-- **Per-session performance logging** with movement-adaptive inputs: run→time+distance; strength→reps+weight or seconds per exercise; circuit→rounds; notes everywhere. Placeholders **carry over last week's logged value** (matched by movement name), falling back to the plan target.
-- **Easier options + "Modified" tracking** per movement (regressions drawn from the guide's cues; a checkbox records when scaled; surfaces in "still scaling").
-- **Bonus sessions** — add extra Run/Strength/Circuit to any week, reusing that week's prescription; logged/charted/removable; don't change the 141 denominator.
-- **Guided run intervals** — timer with warm-up/cool-down, run/walk phases, beeps + vibration + wake-lock, skip/pause/finish, one-tap logging. Free-run fallback for distance runs.
-- **Cloud sync** — Google sign-in, Firestore, offline-first; each account isolated by security rules (`users/{uid}`). Sign-in optional.
+## 3. Feature set
+- **Core plan:** 3 fixed sessions/week (Run 1 / Strength / Circuit) over 47
+  weeks in 4 phases (Base 10 / Strength Build 14 / Race Specific 14 / Terrain &
+  Taper 9), anchored so week 47 is race week. Dates match the source xlsx.
+- **Onboarding inputs:** race date, days/week, running base. Running base sets
+  only where the run progression starts; strength always starts at Strength A
+  (≥ 4 weeks); freed weeks extend Phase 2; a close race compresses P2→P3→terrain
+  and protects Phase 1 + the final 2 taper weeks.
+- **Overlay days (days-per-week 4/5/6):** Day 4 Grip & Pull (sets progress by
+  phase, drop to 2 in the last 2 weeks), Day 5 Easy Run 2, Day 6 Mobility &
+  Carry. Fixed order; never alter the core 3, phases, or race math. Beginner
+  gate: not-running + 5/6 days warns before saving, and Easy Run 2 is locked
+  until week 5 (substituted by Mobility & Carry).
+- **Run scaling by experience** on Day 1 + Easy Run 2: run3 ×1.25 (+2 hills),
+  regular ×1.5 (+4 hills, weekly pack from Phase 2). Never scales Phase 1,
+  Broken 5K, taper, or race week.
+- **Extra sessions + supplemental library:** "Add a session" repeats the week's
+  Run/Strength/Circuit or adds a named preset (Grip Ladder, Hotel Room 15,
+  Obstacle Skills, Recovery Run, Ankle & Terrain Prep, Stairwell Intervals).
+  Extras are logged/charted but **excluded from the completion denominator**.
+- **Per-session logging** with movement-adaptive inputs (time+distance / reps+
+  weight / seconds / rounds), placeholders that carry over last week's numbers,
+  and per-movement "Easier options" with a "Modified" checkbox.
+- **Guided run intervals:** timestamp-based timer (accurate across screen lock),
+  warm-up/cool-down, run/walk/incline phases (incline segment preserved), beeps
+  + vibration + wake-lock, one-tap logging. Distance runs fall back to free-run.
+- **Cloud sync:** Google sign-in, Firestore, offline-first, per-account isolated.
+- **Progress:** running/lift/grip trend charts, streak, "still scaling" list,
+  consistency breakdown.
 
 ## 4. Data model
-**localStorage key `tm.data.v1`** (also the Firestore doc shape at `users/{uid}`):
+localStorage key `tm.data.v1` (same shape as the Firestore doc `users/{uid}`):
 ```
-{ version, settings:{onboarded,raceDate,runningBase,daysPerWeek,startDate,hotelMode,lastExportPrompt,createdAt},
-  marks:{ "<week>:<session>": done|backup|partial|missed },
-  logs:{  "<week>:<session>": {min,mi} | {rounds} | {ex:{<i>:{n,w,mod}}} , notes },
-  bonus:{ "<week>": [{id,kind,n}] },
-  hangs:[ {id,date,seconds,grip,notes} ] }
+{ version, settings{onboarded,raceDate,runningBase,daysPerWeek,startDate,
+                    hotelMode,lastExportPrompt,createdAt},
+  marks{ "<week>:<session>": done|backup|partial|missed },
+  logs{  "<week>:<session>": {min,mi}|{rounds}|{ex:{<i>:{n,w,mod}}}, notes },
+  extra{ "<week>": [{id,kind,n,preset?}] },
+  hangs[ {id,date,seconds,grip,notes} ] }
 ```
-`<session>` is `run|strength|circuit` for core, or a bonus id for extras. Sync =
-last-write-wins at the doc level; first sign-in does a union merge so nothing is
-lost.
+`<session>` = `run|strength|circuit` (core), `overlay-grip|overlay-run2|
+overlay-mobility` (overlay days, derived per week), or an extra id. Overlay days
+are **derived** from days-per-week + running base (attached as `week.overlays`),
+not stored. A migration moves the former `bonus` key to `extra` with no data loss.
+Sync is doc-level last-write-wins; first sign-in unions local + remote.
 
-## 5. Scheduling engine (`src/lib/schedule.js`) — the highest-risk logic
-- Phases (default): Base 10w, Strength Build 14w, Race Specific 14w, Terrain&Taper 9w = **47 weeks**, anchored so week 47 = race week; default start Aug 3 2026 for a June 26 2027 race (matches the xlsx dates exactly).
-- **Running base** sets only where the *run* progression starts: none→wk1, jog12→wk5, run3→wk10, regular→wk11. Implemented as skip = {0,4,9,10}.
-- **Strength never skips:** everyone starts Strength A, Phase 1 = `max(4, 10-skip)` weeks; freed weeks extend Phase 2.
-- **Fit to race:** if the race is too close, compress Phase 2 → Phase 3 → terrain (floors of 2/2/0), never Phase 1, never the final 2 taper weeks. If there's extra runway, extend Phase 2.
-- **Strength A reps** computed per week (`strengthAForWeek`): +1 rep/week, +1 round & reset every 5 weeks.
+## 5. Security — verified live, not just documented
+Firestore rules: `allow read, write: if request.auth != null &&
+request.auth.uid == uid`. Probed the live database unauthenticated: **read and
+write both return 403 PERMISSION_DENIED on `users/*` and every other path** —
+default-deny, not open test mode. Accounts are isolated; friends' data can't be
+read or written by anyone else. The Firebase web config in the repo is not a
+secret (protection is the rules).
 
-All content (run prescriptions, Strength A/B/C, Circuit A/B/C, backup, taper) is
-transcribed verbatim from the PDF/xlsx into `src/data/plan.js`; exercise guide in
-`src/data/exercises.js`; regressions in `src/data/modifications.js`.
+## 6. Tests (Vitest) — 51 passing
+Run with `npm test` (executes under `TZ=America/Los_Angeles` so any regression
+to local-time date math fails). Files: `test/schedule`, `metrics`, `runScaling`,
+`runIntervals`, `overlays`. Coverage includes: default 47-week/10-14-14-9 plan
+and week 47 = race week; all four running-base skips landing on race week;
+Phase 1 never < 4 weeks; compression protecting Phase 1 + 2 taper weeks; extra
+runway extending Phase 2; **timezone invariance** (UTC-derived week); run scaling
+verification cases (4mi→6mi, 8×45→10×45, 35min→50min) and protected sessions;
+run-interval parsing incl. the incline segment; overlay gate + core-invariance +
+grip taper; **completion rate ≤ 100%** with overlays and extras marked.
 
-## 6. File map
-- `lib/`: `schedule.js` (plan generation), `storage.js` (persistence + export/import), `stats.js` (Dashboard stats + hang stats), `metrics.js` (log index, prev-value lookup, progress series, streak, modification helpers), `runIntervals.js` (run→phases parser), `firebase.js` + `firebaseConfig.js` + `sync.js` (auth/Firestore/merge hook).
-- `components/`: `App` wiring, `Onboarding`, `TabBar`, `Today`, `Plan`, `Exercises`, `Grip`, `Progress`, `Settings`, `SessionCard`, `SessionLog`, `BonusArea`, `Chart`, `LineChart`, `RunTimer`, `ExportNudge`.
-- `data/`: `plan.js`, `exercises.js`, `modifications.js`.
+## 7. Key modules
+- `lib/schedule.js` — plan generation, UTC day-number date math, overlay attach,
+  run-scaling application.
+- `lib/runScaling.js`, `lib/runIntervals.js` — pure, well-tested.
+- `lib/stats.js` — completion (arrived-only, clamped ≤ 100%) + hang stats.
+- `lib/metrics.js` — log index (core + extra + overlay), prev-value lookup,
+  progress series.
+- `lib/storage.js` (+ migration), `lib/sync.js`, `lib/firebase.js`.
+- `data/plan.js`, `data/overlays.js`, `data/supplemental.js`,
+  `data/exercises.js`, `data/modifications.js`.
+- `components/` — App, TabBar, Today, Plan, Exercises, Grip, Progress, Settings,
+  Onboarding, SessionCard, SessionLog, ExtraArea, OverlaySection, Chart,
+  LineChart, RunTimer, ExportNudge.
 
-## 7. Known limitations / please review these specifically
-1. **Sync conflicts (doc-level last-write-wins).** Two devices editing the same week offline, then both coming online, can clobber each other (whole-doc overwrite). Fine for one person; confirm that's acceptable or suggest field-level merges.
-2. **`RunTimer` interval logic** (`components/RunTimer.jsx`) — the countdown nests `setIdx` inside `setLeft` and reads `idx` in a fallback expression; it works in testing but the phase-transition math is convoluted and is the most likely place for an off-by-one or a stale-closure bug. Worth close scrutiny / a rewrite to a single reducer or timestamp-based clock.
-3. **Run parser gaps** (`lib/runIntervals.js`) — "30-35 min easy, plus 5 min at 4% incline mid-run" is guided as a flat 30-min block (the incline segment is dropped). Distance runs (miles, Broken 5K) intentionally have no guided mode. Confirm these are acceptable.
-4. **Bonus vs core stats** — completed/completion-rate count **core sessions only**; bonus sessions show in Progress charts (via logs) but not in "sessions completed." Intentional, but may read as an inconsistency.
-5. **Same-week duplicate points** — a bonus run + core run in the same week produce two chart points at the same x-label. Cosmetic.
-6. **Timezone** — all date math is device-local (`parseDate`/`mondayOf`). Traveling across timezones near a week boundary could nudge the "current week." Low risk; worth a sanity check.
-7. **Dead prop** — `SessionCard` still destructures an unused `onGuided`. Harmless; should be removed.
-8. **PWA precache weight** — the ~611KB Firestore chunk is precached even for users who never sign in. Consider excluding it from precache or lazy-caching.
-9. **Compression edge case** — verify the `too-tight` path (race date only a few weeks out) still protects Phase 1 + the 2 taper weeks and doesn't produce a negative/zero-length phase.
-10. **Firebase config is committed** in `firebaseConfig.js` — correct/safe for Firebase web (protection is the Firestore rules), but may be flagged by reviewers unfamiliar with Firebase. Rule: `allow read, write: if request.auth != null && request.auth.uid == uid`.
+## 8. Design system (Part 3)
+Palette pitch/char/steel/bone/ash/blaze/caution/mud/kill (old token names alias
+to it). Big Shoulders Display headings. SVG grain overlay, caution hazard-stripe
+dividers, mud splatter on the Today hero, giant days-to-race numeral, rubber-
+stamp DONE/BACKUP/PARTIAL/MISSED on marking, mile-marker phase headers, a Plan
+vertical course map, dog-tag session cards. `prefers-reduced-motion` makes the
+stamp instant and stops the pulse.
 
-## 8. Build & deploy
-`npm install` → `npm run build` (outputs to `/docs`) → committed and pushed;
-GitHub Pages serves it. **No automated tests exist yet.** The scheduling engine
-(`schedule.js`) and metrics (`metrics.js`) are pure functions and are the best
-first targets for unit tests.
+## 9. Known limitations / review these
+1. **Sync is doc-level last-write-wins.** Two devices editing the same week
+   offline then reconnecting can clobber each other. Fine for one person;
+   consider field-level merges if that changes.
+2. **Overlay days + extras are excluded from the completion denominator**
+   (intentional, keeps the rate ≤ 100% and comparable across users). A reviewer
+   may want overlay completion surfaced somewhere.
+3. **Same-week duplicate chart points** — a core run + an extra/Easy-Run-2 in the
+   same week produce two points at the same week label. Cosmetic.
+4. **Run-scaling parsing is regex-based.** It targets the leading duration,
+   mileage, and hill reps; unusual future strings could be missed. Covered by
+   tests for the real prescriptions.
+5. **`clip-path`/`position:fixed` gotcha** — dog-tag cards use `clip-path`, which
+   makes them the containing block for fixed descendants. RunTimer now portals to
+   `document.body`; any *new* fixed-position child rendered inside a card must do
+   the same.
+6. **Grain overlay sits above modals** (z-index) at ~3.5% — intentional uniform
+   texture; confirm it reads acceptably on the Settings/timer panels.
+7. **Timezone model** uses the UTC calendar day; near the UTC midnight boundary a
+   late-evening session in far-west zones can read as the next day. Weekly
+   granularity absorbs it except at the Sun→Mon boundary. Accepted trade-off for
+   travel-stability; see the timezone tests.
+8. **No E2E/visual tests** — logic is unit-tested; UI was verified by screenshot.
 
-## 9. Commit history (feature order)
-1. Build the base PWA from the three source files
-2. Add optional Firebase cloud sync (dormant until configured)
-3. Enable cloud sync with the Firebase project config
-4. Strength A: weights-first row + concrete per-week reps
-5. Per-session performance logging (times/distances, reps/weights, seconds)
-6. Per-movement easier options + "did modified" tracking
-7. Carry last week's numbers as placeholders + add a Progress tab
-8. Bonus sessions, days-per-week nudge, and guided run intervals
+## 10. Commit history (high level)
+Base PWA → Firebase sync (dormant → enabled) → Strength A per-week reps →
+performance logging → easier-options/modified → placeholders + Progress tab →
+extra sessions/day nudge/guided runs → **Part 1** stabilization (tests,
+timezone, RunTimer, extra rename, precache) → **Part 2** overlays/library/scaling
+→ **Part 3** design overhaul → guided-timer portal fix. Deploys from `main`.
