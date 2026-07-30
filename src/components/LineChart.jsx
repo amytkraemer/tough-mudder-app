@@ -26,7 +26,7 @@ export default function LineChart({ points, benchmarks = [60, 90], height = 180 
       {/* axis baseline */}
       <line x1={padL} x2={W - padR} y1={ny(0)} y2={ny(0)} stroke="var(--line)" />
       {/* area + line */}
-      <path d={`${path} L${nx(xs.length - 1)},${ny(0)} L${nx(0)},${ny(0)} Z`} fill="rgba(242,163,60,.10)" />
+      <path d={`${path} L${nx(xs.length - 1)},${ny(0)} L${nx(0)},${ny(0)} Z`} fill="rgba(255,106,19,.10)" />
       <path d={path} fill="none" stroke="var(--blaze)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
       {/* points */}
       {sorted.map((p, i) => (

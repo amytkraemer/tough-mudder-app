@@ -6,7 +6,7 @@ import { parseRun } from '../lib/runIntervals.js'
 import SessionLog from './SessionLog.jsx'
 import RunTimer from './RunTimer.jsx'
 
-const SPINE = { run: 'var(--lichen)', strength: 'var(--blaze)', circuit: 'var(--clay)' }
+const SPINE = { run: 'var(--blaze)', strength: 'var(--caution)', circuit: 'var(--mud)' }
 const DAYMETA = {
   run: { day: 'Day 1', type: 'Run', where: 'Outside, treadmill, or hotel stairwell' },
   strength: { day: 'Day 2', type: 'Strength', where: 'Hotel room, straps, or gym' },
@@ -20,11 +20,12 @@ const MARKS = [
   { v: 'missed', label: 'Missed', hint: 'Skipped' },
 ]
 const MARK_STYLE = {
-  done: 'bg-lichen border-lichen text-bog',
-  backup: 'bg-blaze border-blaze text-bog',
-  partial: 'bg-clay border-clay text-bog',
-  missed: 'bg-alarm border-alarm text-bog',
+  done: 'bg-blaze border-blaze text-pitch',
+  backup: 'bg-blaze border-blaze text-pitch',
+  partial: 'bg-caution border-caution text-pitch',
+  missed: 'bg-kill border-kill text-pitch',
 }
+const STAMP_COLOR = { done: 'var(--blaze)', backup: 'var(--blaze)', partial: 'var(--caution)', missed: 'var(--kill)' }
 
 export function StatusPill({ mark }) {
   if (!mark) return null
@@ -36,14 +37,15 @@ export function StatusPill({ mark }) {
   )
 }
 
-export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev, label, titleOverride, onRemove, onGuided }) {
+export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev, label, titleOverride, contentOverride, note, onRemove }) {
   const [showBackup, setShowBackup] = useState(false)
   const [showLog, setShowLog] = useState(false)
   const [showMods, setShowMods] = useState(false)
   const [timer, setTimer] = useState(false)
+  const [stamp, setStamp] = useState(null) // transient rubber-stamp on marking
   const meta = DAYMETA[kind]
   const isRun = kind === 'run'
-  const content = isRun ? null : week[kind]
+  const content = isRun ? null : (contentOverride || week[kind])
   const hasLog = logHasData(log)
   const runText = isRun ? (titleOverride || week.run) : ''
   const guided = isRun ? parseRun(runText) : null
@@ -51,11 +53,23 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev
     .map((ex, i) => ({ i, ex, tip: modificationFor(ex) }))
     .filter((x) => x.tip)
 
+  // marking: stamp the card when you set (not un-set) a status
+  const doMark = (v) => {
+    if (v !== mark) { setStamp(v); setTimeout(() => setStamp((s) => (s === v ? null : s)), 1100) }
+    onMark(v)
+  }
+  const stampLabel = stamp && MARKS.find((m) => m.v === stamp)?.label
+
   return (
     <article
-      className="bg-surface border border-line rounded p-4 mb-3"
-      style={{ borderLeft: `3px solid ${SPINE[kind]}` }}
+      className="dogtag relative p-4 mb-3"
+      style={{ '--spine': SPINE[kind] }}
     >
+      {stamp && (
+        <div className="stamp-wrap" aria-hidden="true">
+          <span className="stamp" style={{ color: STAMP_COLOR[stamp] }}>{stampLabel}</span>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-cond font-bold uppercase tracking-[.12em] text-[.62rem] text-bone-dim">
@@ -73,6 +87,10 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev
           )}
         </div>
       </div>
+
+      {note && (
+        <p className="mt-2 text-[.78rem] rounded px-2.5 py-1.5" style={{ background: 'rgba(255,212,0,.10)', borderLeft: '2px solid var(--caution,#FFD400)', color: 'var(--bone)' }}>{note}</p>
+      )}
 
       {isRun ? (
         <div className="mt-3 text-sm text-bone-dim">
@@ -101,7 +119,7 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev
             <p className="mt-2 text-[.82rem] text-lichen">{content.progression}</p>
           )}
           {content.grip && content.grip.length > 0 && (
-            <div className="mt-3 rounded p-2.5" style={{ background: 'rgba(242,163,60,.08)', borderLeft: '2px solid var(--blaze)' }}>
+            <div className="mt-3 rounded p-2.5" style={{ background: 'rgba(255,106,19,.08)', borderLeft: '2px solid var(--blaze)' }}>
               <p className="font-cond font-bold uppercase text-[.62rem] tracking-wider text-blaze mb-1">Grip work</p>
               <ul className="cues">
                 {content.grip.map((g, i) => <li key={i}>{g}</li>)}
@@ -186,7 +204,7 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev
       </button>
       {showLog && (
         <div className="mt-2 rounded border border-line bg-bog p-3">
-          <SessionLog kind={kind} week={week} log={log} onLog={onLog} prev={prev} />
+          <SessionLog kind={kind} content={content} log={log} onLog={onLog} prev={prev} />
         </div>
       )}
 
@@ -197,9 +215,9 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev
           return (
             <button
               key={m.v}
-              onClick={() => onMark(m.v)}
+              onClick={() => doMark(m.v)}
               className={`flex flex-col items-center justify-center min-h-[64px] rounded border-2 no-tap-highlight transition-colors ${
-                active ? MARK_STYLE[m.v] : 'bg-bog border-line text-bone active:bg-surface-2'
+                active ? MARK_STYLE[m.v] : 'bg-pitch border-steel text-bone active:bg-char'
               }`}
             >
               <span className="font-cond font-bold uppercase tracking-wide text-base">{m.label}</span>

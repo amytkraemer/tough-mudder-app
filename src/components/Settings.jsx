@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { RUNNING_BASE, buildSchedule } from '../lib/schedule.js'
 import { downloadBackup, importJSON } from '../lib/storage.js'
+import { BEGINNER_VOLUME_WARNING } from '../data/overlays.js'
 
 const STATUS_LABEL = {
   syncing: { t: 'Syncing…', c: 'var(--blaze)' },
@@ -135,6 +136,15 @@ export default function Settings({ data, update, sync, onClose }) {
                   </button>
                 ))}
               </div>
+              <p className="text-[.72rem] text-bone-dim mt-1.5">
+                Core 3 stay fixed (Run 1 · Strength · Circuit). Extra days add overlays in order:
+                <b className="text-bone"> 4</b> Grip &amp; Pull · <b className="text-bone">5</b> Easy Run 2 · <b className="text-bone">6</b> Mobility &amp; Carry.
+              </p>
+              {daysPerWeek >= 5 && runningBase === 'none' && (
+                <p className="mt-2 text-[.8rem] rounded px-3 py-2" style={{ background: 'rgba(255,212,0,.12)', borderLeft: '3px solid var(--caution,#FFD400)', color: 'var(--bone)' }}>
+                  {BEGINNER_VOLUME_WARNING}
+                </p>
+              )}
             </div>
 
             <div className="mb-4">

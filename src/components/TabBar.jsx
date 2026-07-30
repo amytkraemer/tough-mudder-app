@@ -25,8 +25,8 @@ export default function TabBar({ tab, setTab }) {
             >
               <Icon active={active} />
               <span
-                className={`font-cond font-semibold uppercase text-[.62rem] tracking-wider ${
-                  active ? 'text-blaze' : 'text-bone-dim'
+                className={`font-display uppercase text-[.72rem] tracking-wide leading-none ${
+                  active ? 'text-blaze' : 'text-ash'
                 }`}
               >
                 {t.label}

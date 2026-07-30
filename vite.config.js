@@ -19,14 +19,26 @@ export default defineConfig({
       ],
       workbox: {
         globPatterns: ['**/*.{js,css,html,woff2,png,svg,ico}'],
+        // Keep the Firebase chunks (the only assets/index.esm-*.js files,
+        // ~760KB incl. the 611KB Firestore chunk) OUT of the precache. They are
+        // only needed after Google sign-in, so we fetch them lazily and cache
+        // at runtime instead of shipping them to every first load.
+        globIgnores: ['**/assets/index.esm-*.js'],
         navigateFallback: '/tough-mudder-app/index.html',
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/index\.esm-.*\.js$/,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'firebase-lazy', expiration: { maxEntries: 20 } },
+          },
+        ],
       },
       manifest: {
         name: 'Tough Mudder 5K Training',
         short_name: 'TM Training',
         description: '47-week Tough Mudder 5K training plan, tracker, exercise guide and grip log.',
-        theme_color: '#0E1712',
-        background_color: '#0E1712',
+        theme_color: '#0A0A0B',
+        background_color: '#0A0A0B',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/tough-mudder-app/',

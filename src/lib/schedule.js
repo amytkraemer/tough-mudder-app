@@ -13,6 +13,8 @@ import {
   PHASE3_ROTATION, PHASE4_TERRAIN_RUN, TAPER_RUN, RACE_WEEK_RUN,
   STRENGTH, CIRCUIT, TAPER, strengthAForWeek,
 } from '../data/plan.js'
+import { scaleRun } from './runScaling.js'
+import { overlaysForWeek } from '../data/overlays.js'
 
 const DAY = 86400000
 
@@ -23,26 +25,44 @@ export const RUNNING_BASE = {
   regular: { label: 'Running regularly', desc: 'Running is a habit', skip: 10 },
 }
 
-// ---- date helpers (all local-time, date-only) ----
+// ---- date helpers (timezone-safe, date-only) ----
+// Everything works in whole UTC "day numbers" derived from Y-M-D strings, so no
+// local-midnight arithmetic can shift which training week you're in when you fly
+// across timezones. The only place we read a Date is to turn "now" into a
+// calendar date, and we read it in UTC so the same instant maps to the same day
+// regardless of the device's timezone.
+const pad = (n) => String(n).padStart(2, '0')
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// Date | 'YYYY-MM-DD' -> 'YYYY-MM-DD' (UTC calendar day for a Date).
+export function utcYmd(v) {
+  if (typeof v === 'string') return v.slice(0, 10)
+  return `${v.getUTCFullYear()}-${pad(v.getUTCMonth() + 1)}-${pad(v.getUTCDate())}`
+}
+function ymdToNum(ymd) {
+  const [y, m, d] = String(ymd).slice(0, 10).split('-').map(Number)
+  return Math.round(Date.UTC(y, m - 1, d) / DAY)
+}
+function numToYmd(n) {
+  const dt = new Date(n * DAY)
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`
+}
+function mondayNum(n) {
+  const dow = (new Date(n * DAY).getUTCDay() + 6) % 7 // 0 = Monday
+  return n - dow
+}
+function weeksInclusive(startMonNum, endMonNum) { return Math.round((endMonNum - startMonNum) / 7) + 1 }
+function labelFromNum(n) { const dt = new Date(n * DAY); return `${MONTHS[dt.getUTCMonth()]} ${dt.getUTCDate()}` }
+
+// kept for callers that format a local calendar date (e.g. default log date)
 export function parseDate(s) {
   if (s instanceof Date) return new Date(s.getFullYear(), s.getMonth(), s.getDate())
   const [y, m, d] = s.split('-').map(Number)
   return new Date(y, m - 1, d)
 }
 export function fmtISO(d) {
-  const p = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
-function mondayOf(d) {
-  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  const dow = (x.getDay() + 6) % 7 // 0 = Monday
-  x.setDate(x.getDate() - dow)
-  return x
-}
-function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x }
-function diffDays(a, b) { return Math.round((mondayOf(a) - mondayOf(b)) / DAY) }
-function weeksInclusive(startMon, endMon) { return Math.round((endMon - startMon) / (7 * DAY)) + 1 }
-
 export function fmtMonthDay(d) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
@@ -104,24 +124,25 @@ function runForPhase3(j) {
 // ---- main builder ----
 export function buildSchedule({ raceDate, runningBase = 'none', daysPerWeek = 3, startDate = null, today = new Date() }) {
   const warnings = []
-  const race = parseDate(raceDate)
-  const raceMon = mondayOf(race)
-  const todayMon = mondayOf(today)
+  const raceNum = ymdToNum(raceDate)
+  const raceMonNum = mondayNum(raceNum)
+  const todayNum = ymdToNum(utcYmd(today))
+  const todayMonNum = mondayNum(todayNum)
   const base = baseLayout(runningBase)
   const desiredTotal = base.P1 + base.P2 + base.P3 + base.terrain + base.taper
 
-  // Determine start Monday + total length.
-  let startMon, L
+  // Determine start Monday + total length (all in day-numbers).
+  let startMonNum, L
   if (startDate) {
-    startMon = mondayOf(parseDate(startDate))
-    L = Math.max(base.P1 + base.taper, weeksInclusive(startMon, raceMon))
+    startMonNum = mondayNum(ymdToNum(startDate))
+    L = Math.max(base.P1 + base.taper, weeksInclusive(startMonNum, raceMonNum))
   } else {
-    const naturalStart = addDays(raceMon, -(desiredTotal - 1) * 7)
-    if (naturalStart >= todayMon) {
-      startMon = naturalStart; L = desiredTotal            // plenty of runway: keep full plan
+    const naturalStartNum = raceMonNum - (desiredTotal - 1) * 7
+    if (naturalStartNum >= todayMonNum) {
+      startMonNum = naturalStartNum; L = desiredTotal      // plenty of runway: keep full plan
     } else {
-      startMon = todayMon                                  // race is close: start now + compress
-      L = Math.max(base.P1 + base.taper, weeksInclusive(startMon, raceMon))
+      startMonNum = todayMonNum                            // race is close: start now + compress
+      L = Math.max(base.P1 + base.taper, weeksInclusive(startMonNum, raceMonNum))
     }
   }
 
@@ -136,7 +157,8 @@ export function buildSchedule({ raceDate, runningBase = 'none', daysPerWeek = 3,
 
   const weeks = []
   for (let i = 0; i < total; i++) {
-    const monday = addDays(startMon, i * 7)
+    const mNum = startMonNum + i * 7
+    const monday = new Date(mNum * DAY)   // UTC-midnight Date, for display only
     let phaseId, phaseIdx, run, strength, circuit, isTaper = false, isRaceWeek = false
 
     if (i < b1) {                          // Phase 1 — Base
@@ -171,12 +193,17 @@ export function buildSchedule({ raceDate, runningBase = 'none', daysPerWeek = 3,
       }
     }
 
+    // scale the Day 1 run by experience (never touches Phase 1 / Broken 5K / taper)
+    run = scaleRun(run, runningBase, { phaseId, isTaper, isRaceWeek, isDay1: true })
+
     weeks.push({
       week: i + 1,
       phaseId,
       phase: PHASES[phaseId - 1],
       monday,
-      dateLabel: fmtMonthDay(monday),
+      mondayNum: mNum,
+      mondayYmd: numToYmd(mNum),
+      dateLabel: labelFromNum(mNum),
       run,
       strength,
       circuit,
@@ -185,39 +212,47 @@ export function buildSchedule({ raceDate, runningBase = 'none', daysPerWeek = 3,
     })
   }
 
-  // Current week from today.
-  const firstMon = weeks[0].monday
-  const lastMon = weeks[weeks.length - 1].monday
-  let currentIndex, status = 'active'
-  if (todayMon < firstMon) { currentIndex = 0; status = 'not-started' }
-  else if (todayMon > lastMon) { currentIndex = weeks.length - 1; status = 'finished' }
-  else { currentIndex = Math.round(diffDays(todayMon, firstMon) / 7); status = 'active' }
-  currentIndex = Math.max(0, Math.min(weeks.length - 1, currentIndex))
+  // Attach optional overlay days (Grip & Pull, Easy Run 2, Mobility & Carry).
+  // These depend on days-per-week + running base and never change the core plan.
+  for (let i = 0; i < weeks.length; i++) {
+    weeks[i].overlays = overlaysForWeek(weeks[i], weeks[i - 1], daysPerWeek, runningBase)
+  }
 
-  const daysToRace = Math.max(0, Math.round((race - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / DAY))
+  // Current week from today (day-number comparison, timezone-independent).
+  const firstMonNum = startMonNum
+  const lastMonNum = startMonNum + (total - 1) * 7
+  let currentIndex, status = 'active'
+  if (todayMonNum < firstMonNum) { currentIndex = 0; status = 'not-started' }
+  else if (todayMonNum > lastMonNum) { currentIndex = total - 1; status = 'finished' }
+  else { currentIndex = Math.round((todayMonNum - firstMonNum) / 7); status = 'active' }
+  currentIndex = Math.max(0, Math.min(total - 1, currentIndex))
+
+  const daysToRace = Math.max(0, raceNum - todayNum)
 
   return {
     weeks,
     currentIndex,
     status,
     daysToRace,
-    startDate: fmtISO(startMon),
-    raceDate: fmtISO(race),
+    startDate: numToYmd(startMonNum),
+    raceDate: numToYmd(raceNum),
     totalWeeks: total,
     totalSessions: total * 3,
     layout: lay,
     warnings,
     daysPerWeek,
     runningBase,
+    todayYmd: numToYmd(todayNum),
   }
 }
 
-// Suggested weekday layout for the three sessions (spaced out, never stacked).
+// Suggested weekday layout, spaced out (never two quality days back to back).
+// Overlay days follow the fixed order: 4 Grip & Pull, 5 Easy Run 2, 6 Mobility.
 const DAY_PLANS = {
   3: [{ d: 'Mon', k: 'run' }, { d: 'Wed', k: 'strength' }, { d: 'Fri', k: 'circuit' }],
-  4: [{ d: 'Mon', k: 'run' }, { d: 'Wed', k: 'strength' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'hang' }],
-  5: [{ d: 'Mon', k: 'run' }, { d: 'Tue', k: 'hang' }, { d: 'Wed', k: 'strength' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'hang' }],
-  6: [{ d: 'Mon', k: 'run' }, { d: 'Tue', k: 'hang' }, { d: 'Wed', k: 'strength' }, { d: 'Thu', k: 'hang' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'hang' }],
+  4: [{ d: 'Mon', k: 'run' }, { d: 'Wed', k: 'strength' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'grip' }],
+  5: [{ d: 'Mon', k: 'run' }, { d: 'Tue', k: 'run2' }, { d: 'Wed', k: 'strength' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'grip' }],
+  6: [{ d: 'Mon', k: 'run' }, { d: 'Tue', k: 'run2' }, { d: 'Wed', k: 'strength' }, { d: 'Thu', k: 'mobility' }, { d: 'Fri', k: 'circuit' }, { d: 'Sat', k: 'grip' }],
 }
 export function dayPlan(daysPerWeek) {
   return DAY_PLANS[daysPerWeek] || DAY_PLANS[3]

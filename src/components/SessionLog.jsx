@@ -17,7 +17,7 @@ function Num({ value, onChange, placeholder, suffix, w = 'w-full' }) {
   )
 }
 
-export default function SessionLog({ kind, week, log, onLog, prev }) {
+export default function SessionLog({ kind, content, log, onLog, prev }) {
   const notes = log?.notes || ''
   const prevWeek = prev?.week || (prev?.ex && Object.values(prev.ex)[0]?.week)
   const hint = prevWeek ? <p className="text-[.68rem] text-bone-dim mb-2">Greyed numbers are what you did last time (week {prevWeek}). Beat them.</p> : null
@@ -44,7 +44,7 @@ export default function SessionLog({ kind, week, log, onLog, prev }) {
       <div>
         {hint}
         <label className="text-[.68rem] text-bone-dim block">Rounds completed
-          <Num value={log?.rounds} onChange={(v) => onLog({ rounds: v })} placeholder={prev?.rounds || parseRounds(week.circuit.scheme) || '0'} suffix="rounds" w="w-32" />
+          <Num value={log?.rounds} onChange={(v) => onLog({ rounds: v })} placeholder={prev?.rounds || parseRounds(content?.scheme) || '0'} suffix="rounds" w="w-32" />
         </label>
         <NotesField value={notes} onChange={(v) => onLog({ notes: v })} />
       </div>
@@ -52,7 +52,7 @@ export default function SessionLog({ kind, week, log, onLog, prev }) {
   }
 
   // strength — one row per exercise, input type adapts to the movement
-  const exercises = week.strength.exercises
+  const exercises = content?.exercises || []
   return (
     <div>
       {hint}

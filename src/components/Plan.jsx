@@ -2,12 +2,54 @@ import { useState, useMemo } from 'react'
 import { computeStats } from '../lib/stats.js'
 import { buildLogIndex, prevFor } from '../lib/metrics.js'
 import { markKey } from '../lib/storage.js'
-import BonusArea from './BonusArea.jsx'
+import ExtraArea from './ExtraArea.jsx'
+import OverlaySection from './OverlaySection.jsx'
 import { PHASES } from '../data/plan.js'
 import SessionCard, { StatusPill } from './SessionCard.jsx'
 
-const PHASE_ACCENT = { 1: 'var(--lichen)', 2: 'var(--blaze)', 3: 'var(--clay)', 4: 'var(--alarm)' }
+const PHASE_ACCENT = { 1: 'var(--mud)', 2: 'var(--blaze)', 3: 'var(--caution)', 4: 'var(--kill)' }
 const pct = (n) => `${Math.round(n * 100)}%`
+
+function Marker({ num, state }) {
+  const filled = state !== 'ahead'
+  return (
+    <div
+      className={`w-[30px] h-[30px] rounded-full flex items-center justify-center font-display text-sm ${state === 'current' ? 'pulse' : ''}`}
+      style={{ background: filled ? 'var(--blaze)' : 'var(--char)', border: `2px solid ${filled ? 'var(--blaze)' : 'var(--steel)'}`, color: filled ? 'var(--pitch)' : 'var(--ash)' }}
+    >
+      {num}
+    </div>
+  )
+}
+
+function CourseMap({ phases, perPhase, phaseTotals, currentPhaseId }) {
+  return (
+    <div className="relative mb-5">
+      <div className="absolute left-[16px] top-4 bottom-4 w-[3px]" aria-hidden="true"
+        style={{ backgroundImage: 'repeating-linear-gradient(var(--steel) 0 6px, transparent 6px 13px)' }} />
+      {phases.map((p) => {
+        const done = perPhase[p.id] || 0
+        const total = phaseTotals[p.id] || 0
+        const frac = total ? done / total : 0
+        const state = p.id < currentPhaseId ? 'past' : p.id === currentPhaseId ? 'current' : 'ahead'
+        return (
+          <div key={p.id} className="relative flex gap-3 mb-3">
+            <div className="relative z-10 flex-none w-[34px] flex justify-center"><Marker num={p.id} state={state} /></div>
+            <div className="flex-1 pt-0.5">
+              <div className="flex items-baseline justify-between">
+                <span className="font-display uppercase text-[1.05rem] leading-none" style={{ color: state === 'ahead' ? 'var(--ash)' : 'var(--bone)' }}>{p.name}</span>
+                <span className="text-[.72rem] text-ash">{done}/{total}{state === 'current' ? ' · here' : ''}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-steel overflow-hidden mt-1.5">
+                <div className="h-full rounded-full" style={{ width: `${Math.round(frac * 100)}%`, background: PHASE_ACCENT[p.id] }} />
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 function Stat({ big, label, accent, sub }) {
   return (
@@ -31,11 +73,11 @@ function SessionMini({ kind, mark }) {
   )
 }
 
-export default function Plan({ schedule, data, setMark, setLog, addBonus, removeBonus }) {
+export default function Plan({ schedule, data, setMark, setLog, addExtra, removeExtra }) {
   const { weeks, currentIndex, daysToRace } = schedule
   const current = weeks[currentIndex]
   const stats = computeStats({ weeks, marks: data.marks })
-  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.bonus), [weeks, data.logs, data.bonus])
+  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.extra), [weeks, data.logs, data.extra])
 
   const [openPhases, setOpenPhases] = useState(() => ({ [current.phaseId]: true }))
   const [openWeek, setOpenWeek] = useState(current.week)
@@ -50,7 +92,7 @@ export default function Plan({ schedule, data, setMark, setLog, addBonus, remove
   return (
     <div>
       {/* pinned stats */}
-      <header className="px-5 pt-8 pb-4 border-b border-line safe-top sticky top-0 z-20 bg-bog/95 backdrop-blur">
+      <header className="px-5 pt-8 pb-4 border-b border-steel safe-top sticky top-0 z-20 bg-pitch/95 backdrop-blur">
         <p className="eyebrow mb-1">The Plan</p>
         <div className="grid grid-cols-2 gap-2 mt-2">
           <Stat big={daysToRace} label="Days to race" accent="var(--blaze)" />
@@ -66,26 +108,10 @@ export default function Plan({ schedule, data, setMark, setLog, addBonus, remove
       </header>
 
       <div className="px-5 py-4">
-        {/* per-phase progress bars */}
-        <div className="mb-5">
-          <p className="font-cond font-bold uppercase text-[.62rem] tracking-wider text-bone-dim mb-2">Progress by phase</p>
-          {PHASES.map((p) => {
-            const done = stats.perPhase[p.id] || 0
-            const total = phaseTotals[p.id] || 0
-            const frac = total ? done / total : 0
-            return (
-              <div key={p.id} className="mb-2">
-                <div className="flex justify-between text-[.75rem] mb-1">
-                  <span className="text-bone">{p.name}</span>
-                  <span className="text-bone-dim">{done}/{total}</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-line overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: pct(frac), background: PHASE_ACCENT[p.id] }} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        {/* the course: a trail down the screen, one marker per phase */}
+        <p className="font-cond font-bold uppercase text-[.62rem] tracking-wider text-ash mb-3">The course</p>
+        <CourseMap phases={PHASES.filter((p) => byPhase[p.id]?.length)} perPhase={stats.perPhase} phaseTotals={phaseTotals} currentPhaseId={current.phaseId} />
+        <div className="hazard-thin mb-5" aria-hidden="true" />
 
         {/* phase groups */}
         {PHASES.filter((p) => byPhase[p.id]?.length).map((p) => {
@@ -95,13 +121,17 @@ export default function Plan({ schedule, data, setMark, setLog, addBonus, remove
             <section key={p.id} className="mb-4">
               <button
                 onClick={() => setOpenPhases((s) => ({ ...s, [p.id]: !s[p.id] }))}
-                className="w-full flex items-center justify-between py-2 border-b border-line"
+                className="w-full flex items-center justify-between py-2.5 border-b-2"
+                style={{ borderColor: PHASE_ACCENT[p.id] }}
               >
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display uppercase text-base" style={{ color: PHASE_ACCENT[p.id] }}>
-                    {p.id}. {p.name}
-                  </span>
-                  <span className="text-[.72rem] text-bone-dim">{list.length} wk</span>
+                <div className="flex items-center gap-2.5">
+                  <svg width="26" height="34" viewBox="0 0 30 40" aria-hidden="true" className="flex-none">
+                    <rect x="13" y="4" width="3" height="34" fill="var(--steel)" />
+                    <path d="M16 4h12l-4 5 4 5H16z" fill={PHASE_ACCENT[p.id]} />
+                    <text x="21" y="13" textAnchor="middle" fontFamily="'Big Shoulders Display'" fontWeight="800" fontSize="8" fill="var(--pitch)">{p.id}</text>
+                  </svg>
+                  <span className="font-display uppercase text-lg leading-none">{p.name}</span>
+                  <span className="text-[.72rem] text-ash">{list.length} wk</span>
                 </div>
                 <Chevron open={open} />
               </button>
@@ -146,14 +176,15 @@ export default function Plan({ schedule, data, setMark, setLog, addBonus, remove
                                 prev={prevFor(logIndex, w.week, s, w)}
                               />
                             ))}
-                            <BonusArea
+                            <OverlaySection week={w} data={data} logIndex={logIndex} setMark={setMark} setLog={setLog} />
+                            <ExtraArea
                               week={w}
                               data={data}
                               logIndex={logIndex}
                               setMark={setMark}
                               setLog={setLog}
-                              addBonus={addBonus}
-                              removeBonus={removeBonus}
+                              addExtra={addExtra}
+                              removeExtra={removeExtra}
                               daysPerWeek={data.settings.daysPerWeek}
                             />
                           </div>

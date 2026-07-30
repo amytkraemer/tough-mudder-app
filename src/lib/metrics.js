@@ -1,5 +1,7 @@
 // Decide what to log for a given exercise and pull a sensible placeholder
 // (this week's target) out of its prescription string.
+import { SUPPLEMENTAL } from '../data/supplemental.js'
+
 const SECONDS_RE = /\b(sec|hang|hold|hollow|plank|carry)\b/i
 const WEIGHT_RE = /(row|press|split squat|farmer|suitcase|carry|dumbbell|weight|deadlift|kettlebell)/i
 
@@ -48,7 +50,7 @@ export function anyModified(log) {
 
 // ---- previous-value lookup (for placeholders) + progress series ----
 // Index every logged value by movement/kind so we can find "last time".
-export function buildLogIndex(weeks, logs, bonus = {}) {
+export function buildLogIndex(weeks, logs, extra = {}) {
   const map = { run: [], circuit: [] } // map['str|<movement>'] = [{week,n,w}]
   const push = (k, v) => { (map[k] ||= []).push(v) }
   const ingest = (weekNum, kind, log, exercises) => {
@@ -66,12 +68,22 @@ export function buildLogIndex(weeks, logs, bonus = {}) {
     ingest(w.week, 'run', logs[`${w.week}:run`])
     ingest(w.week, 'circuit', logs[`${w.week}:circuit`])
     ingest(w.week, 'strength', logs[`${w.week}:strength`], w.strength?.exercises)
-    for (const b of bonus[w.week] || []) {
-      const ex = b.kind === 'strength' ? w.strength?.exercises : undefined
+    // extra sessions (kind reuses the week's prescription; preset supplies its own)
+    for (const b of extra[w.week] || []) {
+      const ex = b.kind === 'strength' ? (extraExercises(b) || w.strength?.exercises) : undefined
       ingest(w.week, b.kind, logs[`${w.week}:${b.id}`], ex)
+    }
+    // overlay days (Grip & Pull, Easy Run 2, Mobility & Carry)
+    for (const o of w.overlays || []) {
+      ingest(w.week, o.kind, logs[`${w.week}:${o.key}`], o.content?.exercises)
     }
   }
   return map
+}
+
+function extraExercises(b) {
+  if (!b.preset) return null
+  return (SUPPLEMENTAL[b.preset] || {}).exercises || null
 }
 
 const latestBefore = (arr, week) => (arr || []).filter((x) => x.week < week).sort((a, b) => b.week - a.week)[0]
