@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { hangStats } from '../lib/stats.js'
+import { hangStats, hangsArray } from '../lib/stats.js'
 import { GRIP_TYPES } from '../data/plan.js'
 import { fmtISO } from '../lib/schedule.js'
 import LineChart from './LineChart.jsx'
@@ -7,8 +7,8 @@ import LineChart from './LineChart.jsx'
 const HATCH = { backgroundImage: 'repeating-linear-gradient(135deg, rgba(255,106,19,.05) 0 2px, transparent 2px 9px)' }
 
 export default function Grip({ data, update }) {
-  const hangs = data.hangs
-  const stats = hangStats(hangs)
+  const hangList = hangsArray(data.hangs) // hangs is an id-keyed object
+  const stats = hangStats(hangList)
   const [date, setDate] = useState(() => fmtISO(new Date()))
   const [seconds, setSeconds] = useState('')
   const [grip, setGrip] = useState(GRIP_TYPES[0])
@@ -18,15 +18,17 @@ export default function Grip({ data, update }) {
     const s = Number(seconds)
     if (!s || s <= 0) return
     update((d) => {
-      d.hangs.push({ id: `${date}-${Math.round(s)}-${d.hangs.length}`, date, seconds: s, grip, notes: notes.trim() })
+      // unique id so per-id sync merge never collides two devices' entries
+      const id = `${date}-${Math.round(s)}-${Math.round(performance.now())}-${Object.keys(d.hangs).length}`
+      d.hangs[id] = { id, date, seconds: s, grip, notes: notes.trim() }
       return d
     })
     setSeconds(''); setNotes('')
   }
 
-  const remove = (id) => update((d) => { d.hangs = d.hangs.filter((h) => h.id !== id); return d })
+  const remove = (id) => update((d) => { delete d.hangs[id]; return d })
 
-  const sortedDesc = hangs.slice().sort((a, b) => (a.date < b.date ? 1 : -1))
+  const sortedDesc = hangList.slice().sort((a, b) => (a.date < b.date ? 1 : -1))
 
   return (
     <div>
@@ -74,7 +76,7 @@ export default function Grip({ data, update }) {
         {/* chart */}
         <div className="bg-surface border border-line rounded p-3 mb-5">
           <p className="font-cond font-bold uppercase text-[.62rem] tracking-wider text-bone-dim mb-1">Over time · all-time avg {stats.avg}s</p>
-          <LineChart points={hangs.map((h) => ({ date: h.date, seconds: Number(h.seconds) }))} />
+          <LineChart points={hangList.map((h) => ({ date: h.date, seconds: Number(h.seconds) }))} />
         </div>
 
         {/* logger */}

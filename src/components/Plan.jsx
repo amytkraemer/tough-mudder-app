@@ -76,7 +76,8 @@ function SessionMini({ kind, mark }) {
 export default function Plan({ schedule, data, setMark, setLog, addExtra, removeExtra }) {
   const { weeks, currentIndex, daysToRace } = schedule
   const current = weeks[currentIndex]
-  const stats = computeStats({ weeks, marks: data.marks })
+  const stats = computeStats({ weeks, marks: data.marks, extra: data.extra })
+  const hasOverlays = stats.overlay.total > 0
   const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.extra), [weeks, data.logs, data.extra])
 
   const [openPhases, setOpenPhases] = useState(() => ({ [current.phaseId]: true }))
@@ -96,13 +97,23 @@ export default function Plan({ schedule, data, setMark, setLog, addExtra, remove
         <p className="eyebrow mb-1">The Plan</p>
         <div className="grid grid-cols-2 gap-2 mt-2">
           <Stat big={daysToRace} label="Days to race" accent="var(--blaze)" />
-          <Stat big={`${stats.completed}/${stats.scheduledToDate}`} label="Done vs scheduled" sub={`${stats.totalScheduled} total`} />
-          <Stat big={pct(stats.completionRate)} label="Completion rate" accent="var(--lichen)" />
+          <Stat
+            big={pct(stats.core.rate)}
+            label="Core completion"
+            accent="var(--blaze)"
+            sub={`${stats.core.doneToDate}/${stats.core.schedToDate} · of ${stats.core.total}`}
+          />
+          <Stat
+            big={pct(stats.plan.rate)}
+            label="Plan completion"
+            accent={hasOverlays ? 'var(--caution)' : 'var(--ash)'}
+            sub={hasOverlays ? `${stats.plan.doneToDate}/${stats.plan.schedToDate} · incl. overlays` : 'same as core (3 days)'}
+          />
           <Stat
             big={pct(stats.backupShare)}
             label="Backup share"
-            accent={stats.backupWarning ? 'var(--alarm)' : 'var(--bone)'}
-            sub={stats.backupWarning ? 'Over 30% — strength stalling' : 'of completed'}
+            accent={stats.backupWarning ? 'var(--kill)' : 'var(--bone)'}
+            sub={stats.backupWarning ? 'Over 30% — strength stalling' : `${stats.extras.done} extra done`}
           />
         </div>
       </header>

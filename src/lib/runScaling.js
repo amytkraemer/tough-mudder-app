@@ -8,6 +8,21 @@
 const FACTOR = { none: 1, jog12: 1, run3: 1.25, regular: 1.5 }
 const HILL_BONUS = { none: 0, jog12: 0, run3: 2, regular: 4 }
 
+// The scalable tokens. These are the SAME patterns scaleRun() rewrites, exported
+// so a test can assert every run prescription either matches one of them or is
+// explicitly do-not-scale — an unmatched string then fails loudly instead of
+// silently shipping beginner distances to an experienced runner.
+export const SCALE_PATTERNS = {
+  miles: /([\d.]+)(\s*miles?\b)/i,
+  leadDuration: /^(\D*?)([\d.]+)(?:-([\d.]+))?(\s*min\b)/i,
+  hills: /(\d+)(\s*x\s*[\d.]+\s*sec\s+hard\s+uphill)/i,
+}
+export function matchesScalingPattern(runText) {
+  return SCALE_PATTERNS.miles.test(runText)
+    || SCALE_PATTERNS.leadDuration.test(runText)
+    || SCALE_PATTERNS.hills.test(runText)
+}
+
 // round to nearest step, ties resolve DOWN (so 35 x1.5 = 52.5 -> 50, per spec)
 function roundStep(x, step) {
   const q = x / step
@@ -33,14 +48,14 @@ export function scaleRun(runText, runningBase = 'none', ctx = {}) {
   let out = runText
 
   // hill reps: "K x <sec> sec hard uphill"
-  out = out.replace(/(\d+)(\s*x\s*[\d.]+\s*sec\s+hard\s+uphill)/i, (_, k, rest) => `${Number(k) + hillBonus}${rest}`)
+  out = out.replace(SCALE_PATTERNS.hills, (_, k, rest) => `${Number(k) + hillBonus}${rest}`)
 
   if (factor !== 1) {
     // mileage: "N miles" / "N mi"
-    out = out.replace(/([\d.]+)(\s*miles?\b)/i, (_, d, rest) => `${roundStep(Number(d) * factor, 0.25)}${rest}`)
+    out = out.replace(SCALE_PATTERNS.miles, (_, d, rest) => `${roundStep(Number(d) * factor, 0.25)}${rest}`)
 
     // leading duration: "N min" or "N-M min" at (or near) the start of the line
-    out = out.replace(/^(\D*?)([\d.]+)(?:-([\d.]+))?(\s*min\b)/i, (m, pre, a, b, unit) => {
+    out = out.replace(SCALE_PATTERNS.leadDuration, (m, pre, a, b, unit) => {
       const sa = roundStep(Number(a) * factor, 5)
       const sb = b !== undefined ? roundStep(Number(b) * factor, 5) : undefined
       return `${pre}${sb !== undefined ? `${sa}-${sb}` : sa}${unit}`
