@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { computeStats, hangStats } from '../lib/stats.js'
+import { computeStats, hangStats, hangsArray } from '../lib/stats.js'
 import {
   buildLogIndex, loggedMovements, movementSeries, runSeries,
   stillModifying, currentStreak,
@@ -22,8 +22,9 @@ function Card({ title, right, children }) {
 
 export default function Progress({ schedule, data }) {
   const { weeks, currentIndex, daysToRace } = schedule
-  const stats = computeStats({ weeks, marks: data.marks })
+  const stats = computeStats({ weeks, marks: data.marks, extra: data.extra })
   const hs = hangStats(data.hangs)
+  const hangList = hangsArray(data.hangs)
   const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.extra), [weeks, data.logs, data.extra])
   const movements = useMemo(() => loggedMovements(logIndex), [logIndex])
   const streak = currentStreak(weeks, data.marks, currentIndex)
@@ -36,7 +37,7 @@ export default function Progress({ schedule, data }) {
   const activeKey = movements.find((m) => m.key === movKey) ? movKey : movements[0]?.key
   const mov = activeKey ? movementSeries(logIndex, activeKey) : null
 
-  const hangPts = data.hangs.map((h) => ({ label: h.date.slice(5), value: Number(h.seconds) })).filter((p) => p.value > 0)
+  const hangPts = hangList.map((h) => ({ label: h.date.slice(5), value: Number(h.seconds) })).filter((p) => p.value > 0)
 
   return (
     <div>
@@ -53,8 +54,8 @@ export default function Progress({ schedule, data }) {
             <div className="text-[.62rem] uppercase tracking-wide font-cond font-semibold text-bone-dim">Days to race</div>
           </div>
           <div className="bg-surface border border-line rounded p-3 text-center">
-            <div className="font-display text-2xl text-lichen">{Math.round(stats.completionRate * 100)}%</div>
-            <div className="text-[.62rem] uppercase tracking-wide font-cond font-semibold text-bone-dim">Completion</div>
+            <div className="font-display text-2xl text-blaze">{Math.round(stats.plan.rate * 100)}%</div>
+            <div className="text-[.62rem] uppercase tracking-wide font-cond font-semibold text-bone-dim">Plan done</div>
           </div>
           <div className="bg-surface border border-line rounded p-3 text-center">
             <div className="font-display text-2xl">{streak}</div>
@@ -121,9 +122,13 @@ export default function Progress({ schedule, data }) {
         {/* consistency detail */}
         <Card title="Consistency">
           <div className="grid grid-cols-2 gap-y-2 text-sm">
-            <span className="text-bone-dim">Sessions done</span><span className="text-right">{stats.completed} / {stats.scheduledToDate}</span>
+            <span className="text-bone-dim">Core completion</span><span className="text-right">{Math.round(stats.core.rate * 100)}% · {stats.core.doneToDate}/{stats.core.schedToDate}</span>
+            <span className="text-bone-dim">Plan completion</span><span className="text-right">{Math.round(stats.plan.rate * 100)}% · {stats.plan.doneToDate}/{stats.plan.schedToDate}</span>
+            {stats.overlay.total > 0 && (<>
+              <span className="text-bone-dim">Overlay days done</span><span className="text-right">{stats.overlay.doneToDate}/{stats.overlay.schedToDate}</span>
+            </>)}
+            <span className="text-bone-dim">Extra sessions</span><span className="text-right">{stats.extras.done} done{stats.extras.total ? ` / ${stats.extras.total} added` : ''}</span>
             <span className="text-bone-dim">Backup share</span><span className={`text-right ${stats.backupWarning ? 'text-alarm' : ''}`}>{Math.round(stats.backupShare * 100)}%</span>
-            <span className="text-bone-dim">Runs / Strength / Circuits</span><span className="text-right">{stats.runsDone} / {stats.strengthDone} / {stats.circuitsDone}</span>
             <span className="text-bone-dim">Missed</span><span className="text-right">{stats.missed}</span>
           </div>
         </Card>

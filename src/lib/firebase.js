@@ -73,7 +73,9 @@ export async function fetchRemote(uid) {
 export async function writeRemote(uid, payload) {
   const fb = await ensure()
   const { doc, setDoc, serverTimestamp } = await import('firebase/firestore')
-  await setDoc(doc(fb.db, 'users', uid), { ...payload, updatedAt: serverTimestamp() })
+  // merge:true does a recursive map merge, so a device pushing its state never
+  // deletes keys (other weeks' marks/logs, other hangs) it doesn't know about.
+  await setDoc(doc(fb.db, 'users', uid), { ...payload, updatedAt: serverTimestamp() }, { merge: true })
 }
 
 export async function subscribeRemote(uid, cb) {

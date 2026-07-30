@@ -1,83 +1,127 @@
-// Stat definitions ported from the xlsx Dashboard tab.
-//  - Done and Backup both count toward completed. Partial and Missed do not.
-//  - Sessions scheduled to date = 3 per week whose Monday has arrived.
-//  - Backup share = backups / completed. Watch it: past ~30% strength has stalled.
+// Completion accounting.
+//
+// Three buckets, so multi-day users can't hide skipped overlay days:
+//   CORE     = the fixed 3-day spine (Run 1 / Strength / Circuit). Always 3 per
+//              week; the full-plan denominator is 3 * weeks (141 for the standard
+//              47-week plan).
+//   OVERLAY  = Grip & Pull / Easy Run 2 / Mobility & Carry. Part of the plan the
+//              user chose via days-per-week, so they belong in PLAN completion.
+//   EXTRA    = supplemental-library / ad-hoc "Add a session" workouts. Genuinely
+//              optional; counted on their own, never in either completion rate.
+//
+// Rates are "to date" (only weeks whose Monday has arrived) and clamped, so
+// neither Core nor Plan completion can exceed 100%.
 
 import { markKey } from './storage.js'
 import { utcYmd } from './schedule.js'
 
 const COUNTS = new Set(['done', 'backup'])
 const dayNum = (ymd) => { const [y, m, d] = ymd.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / 86400000) }
+const rate = (done, sched) => (sched > 0 ? Math.min(1, done / sched) : 0)
 
-// Only the three CORE sessions per week count toward completion. "Extra"
-// sessions are tracked separately and never enter this denominator, so the
-// completion rate is mathematically incapable of exceeding 100%.
-export function computeStats({ weeks, marks, today = new Date() }) {
+export function computeStats({ weeks, marks, extra = {}, today = new Date() }) {
   const todayNum = dayNum(utcYmd(today))
-  let completedToDate = 0, completedTotal = 0, backups = 0, missed = 0, partial = 0
-  let scheduledToDate = 0
-  let runsDone = 0, strengthDone = 0, circuitsDone = 0
 
-  const perPhase = {}
+  let coreDoneToDate = 0, coreSchedToDate = 0, coreDoneTotal = 0
+  let overlayDoneToDate = 0, overlaySchedToDate = 0, overlayDoneTotal = 0, overlayTotal = 0
+  let backups = 0, missed = 0, partial = 0
+  let runsDone = 0, strengthDone = 0, circuitsDone = 0
+  let extrasDone = 0, extrasTotal = 0
+  const perPhase = {} // core+overlay completed per phase, for the course map
+
   for (const w of weeks) {
     const arrived = w.mondayNum <= todayNum
-    if (arrived) scheduledToDate += 3
+
+    // CORE
+    if (arrived) coreSchedToDate += 3
     for (const s of ['run', 'strength', 'circuit']) {
       const m = marks[markKey(w.week, s)]
       if (!m) continue
       if (m === 'missed') missed++
       if (m === 'partial') partial++
       if (COUNTS.has(m)) {
-        completedTotal++
-        if (arrived) completedToDate++
+        coreDoneTotal++
+        if (arrived) coreDoneToDate++
         if (m === 'backup') backups++
-        if (m === 'done') {
-          if (s === 'run') runsDone++
-          else if (s === 'strength') strengthDone++
-          else circuitsDone++
-        }
+        else if (s === 'run') runsDone++
+        else if (s === 'strength') strengthDone++
+        else circuitsDone++
         perPhase[w.phaseId] = (perPhase[w.phaseId] || 0) + 1
       }
     }
+
+    // OVERLAY (part of the plan for 4/5/6-day users)
+    const overlays = w.overlays || []
+    overlayTotal += overlays.length
+    if (arrived) overlaySchedToDate += overlays.length
+    for (const o of overlays) {
+      const m = marks[markKey(w.week, o.key)]
+      if (!m) continue
+      if (m === 'missed') missed++
+      if (m === 'partial') partial++
+      if (COUNTS.has(m)) {
+        overlayDoneTotal++
+        if (arrived) overlayDoneToDate++
+        if (m === 'backup') backups++
+        perPhase[w.phaseId] = (perPhase[w.phaseId] || 0) + 1
+      }
+    }
+
+    // EXTRA (supplemental / ad-hoc — separate count only)
+    for (const e of extra[w.week] || []) {
+      extrasTotal++
+      const m = marks[markKey(w.week, e.id)]
+      if (COUNTS.has(m)) extrasDone++
+    }
   }
 
-  const totalScheduled = weeks.length * 3
-  // clamp defensively; arrived-only counting already keeps this <= 1
-  const completionRate = scheduledToDate > 0 ? Math.min(1, completedToDate / scheduledToDate) : 0
-  const backupShare = completedTotal > 0 ? backups / completedTotal : 0
+  const coreTotal = weeks.length * 3                 // 141 for the standard plan
+  const planSchedToDate = coreSchedToDate + overlaySchedToDate
+  const planDoneToDate = coreDoneToDate + overlayDoneToDate
+  const planTotal = coreTotal + overlayTotal
+  const planDoneTotal = coreDoneTotal + overlayDoneTotal
+
+  const coreCompletionRate = rate(coreDoneToDate, coreSchedToDate)
+  const planCompletionRate = rate(planDoneToDate, planSchedToDate)
+  const completedForBackup = coreDoneTotal + overlayDoneTotal
+  const backupShare = completedForBackup > 0 ? backups / completedForBackup : 0
 
   return {
-    completed: completedToDate,   // "done vs scheduled" is a to-date figure
-    completedTotal,               // includes sessions logged ahead of schedule
-    backups,
-    missed,
-    partial,
-    scheduledToDate,
-    totalScheduled,
-    completionRate,
+    // structured buckets
+    core: { doneToDate: coreDoneToDate, schedToDate: coreSchedToDate, doneTotal: coreDoneTotal, total: coreTotal, rate: coreCompletionRate },
+    plan: { doneToDate: planDoneToDate, schedToDate: planSchedToDate, doneTotal: planDoneTotal, total: planTotal, rate: planCompletionRate },
+    overlay: { doneToDate: overlayDoneToDate, schedToDate: overlaySchedToDate, doneTotal: overlayDoneTotal, total: overlayTotal },
+    extras: { done: extrasDone, total: extrasTotal },
+
+    // convenience / back-compat (all CORE-based unless noted)
+    completed: coreDoneToDate,
+    scheduledToDate: coreSchedToDate,
+    totalScheduled: coreTotal,
+    completionRate: coreCompletionRate,
+    coreCompletionRate,
+    planCompletionRate,
+    backups, missed, partial,
     backupShare,
     backupWarning: backupShare > 0.3,
-    runsDone,
-    strengthDone,
-    circuitsDone,
-    perPhase, // { phaseId: completedCount }
+    runsDone, strengthDone, circuitsDone,
+    perPhase,
   }
 }
 
 export function hangStats(hangs) {
-  const secs = hangs.map((h) => Number(h.seconds)).filter((n) => !isNaN(n) && n > 0)
+  const list = hangsArray(hangs)
+  const secs = list.map((h) => Number(h.seconds)).filter((n) => !isNaN(n) && n > 0)
   const pr = secs.length ? Math.max(...secs) : 0
   const avg = secs.length ? Math.round(secs.reduce((a, b) => a + b, 0) / secs.length) : 0
-  // rolling average of the last 5 logged hangs
-  const recent = hangs.slice().sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-5)
+  const recent = list.slice().sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-5)
   const recentSecs = recent.map((h) => Number(h.seconds)).filter((n) => !isNaN(n))
   const rolling = recentSecs.length ? Math.round(recentSecs.reduce((a, b) => a + b, 0) / recentSecs.length) : 0
-  return {
-    pr,
-    avg,
-    rolling,
-    count: secs.length,
-    hit60: pr >= 60,
-    hit90: pr >= 90,
-  }
+  return { pr, avg, rolling, count: secs.length, hit60: pr >= 60, hit90: pr >= 90 }
+}
+
+// hangs may be an object keyed by id (new) or a legacy array
+export function hangsArray(hangs) {
+  if (Array.isArray(hangs)) return hangs
+  if (hangs && typeof hangs === 'object') return Object.values(hangs)
+  return []
 }

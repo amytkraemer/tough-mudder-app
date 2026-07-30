@@ -3,45 +3,44 @@ import {
   firebaseEnabled, onAuth, signIn as fbSignIn, signOutUser,
   fetchRemote, writeRemote, subscribeRemote,
 } from './firebase.js'
-import { CURRENT_VERSION, defaultData } from './storage.js'
+import { CURRENT_VERSION, hangsToObject } from './storage.js'
 
 // Only these fields sync. UI-only state stays local.
 function pick(d) {
-  return { settings: d.settings, marks: d.marks || {}, logs: d.logs || {}, extra: d.extra || {}, hangs: d.hangs || [] }
+  return { settings: d.settings, marks: d.marks || {}, logs: d.logs || {}, extra: d.extra || {}, hangs: hangsToObject(d.hangs) }
 }
 
-function dedupeHangs(arr) {
-  const m = new Map()
-  for (const h of arr || []) m.set(h?.id ?? JSON.stringify(h), h)
-  return [...m.values()]
-}
-
-// One-time reconciliation when a device first signs in: never lose anything.
-function mergeInitial(local, remote) {
-  if (!remote) return local
-  const settings = remote.settings?.onboarded
-    ? { ...local.settings, ...remote.settings }   // adopt the already-onboarded plan
-    : { ...remote.settings, ...local.settings }   // local is the real one
+// Per-key merge so two devices editing DIFFERENT weeks (or logging different
+// hangs) both survive a reconnect instead of one wiping the other. marks/logs/
+// extra are id-keyed maps; hangs is now an id-keyed object. On a same-key
+// conflict, the remote (last confirmed server value) wins — an accepted
+// trade-off that resolves virtually every real-world conflict.
+// normalize a doc that may be in the old shape (legacy "bonus" key, hangs array)
+function norm(x) {
+  const s = x || {}
   return {
-    version: CURRENT_VERSION,
-    settings,
-    marks: { ...remote.marks, ...local.marks },
-    logs: { ...remote.logs, ...local.logs },
-    extra: { ...remote.extra, ...local.extra },
-    hangs: dedupeHangs([...(remote.hangs || []), ...(local.hangs || [])]),
+    settings: s.settings || {},
+    marks: s.marks || {},
+    logs: s.logs || {},
+    extra: s.extra || s.bonus || {},   // migrate legacy "bonus"
+    hangs: hangsToObject(s.hangs),      // migrate legacy array
   }
 }
 
-// After the initial merge, the server doc is authoritative (last-write-wins).
-function applyRemote(remote) {
-  const d = defaultData()
+export function mergeData(local, remote) {
+  const l = norm(local)
+  if (!remote) return { version: CURRENT_VERSION, ...l }
+  const r = norm(remote)
+  const settings = r.settings?.onboarded
+    ? { ...l.settings, ...r.settings }   // adopt the already-onboarded plan
+    : { ...r.settings, ...l.settings }   // local is the real one
   return {
     version: CURRENT_VERSION,
-    settings: { ...d.settings, ...(remote.settings || {}) },
-    marks: remote.marks || {},
-    logs: remote.logs || {},
-    extra: remote.extra || {},
-    hangs: remote.hangs || [],
+    settings,
+    marks: { ...l.marks, ...r.marks },
+    logs: { ...l.logs, ...r.logs },
+    extra: { ...l.extra, ...r.extra },
+    hangs: { ...l.hangs, ...r.hangs },   // merge by id — never drops entries
   }
 }
 
@@ -73,14 +72,15 @@ export function useCloudSync(data, setData) {
     ;(async () => {
       try {
         const remote = await fetchRemote(user.uid)
-        const merged = mergeInitial(dataRef.current, remote)
+        const merged = mergeData(dataRef.current, remote)
         applyingRemote.current = true
         setData(() => merged)
         await writeRemote(user.uid, pick(merged))
         if (cancelled) return
         setStatus('synced')
         unsubDoc.current = await subscribeRemote(user.uid, (remoteData) => {
-          const next = applyRemote(remoteData)
+          // merge remote into local per-key so unpushed local edits aren't wiped
+          const next = mergeData(dataRef.current, remoteData)
           if (JSON.stringify(pick(next)) === JSON.stringify(pick(dataRef.current))) return
           applyingRemote.current = true
           setData(() => next)
