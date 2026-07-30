@@ -78,12 +78,26 @@ export async function writeRemote(uid, payload) {
   await setDoc(doc(fb.db, 'users', uid), { ...payload, updatedAt: serverTimestamp() }, { merge: true })
 }
 
-export async function subscribeRemote(uid, cb) {
+// Intentional, full delete of the user's cloud document. This is the ONLY path
+// that removes cloud data — used by account reset. Because writeRemote merges
+// (never deletes keys), a reset that only cleared local would be restored from
+// the cloud on the next load; this makes the erase real and server-side.
+export async function deleteRemote(uid) {
+  const fb = await ensure()
+  const { doc, deleteDoc } = await import('firebase/firestore')
+  await deleteDoc(doc(fb.db, 'users', uid))
+}
+
+export async function subscribeRemote(uid, cb, onGone) {
   const fb = await ensure()
   const { doc, onSnapshot } = await import('firebase/firestore')
   return onSnapshot(doc(fb.db, 'users', uid), (snap) => {
     // Ignore our own not-yet-committed local writes echoing back.
     if (snap.metadata.hasPendingWrites) return
-    if (snap.exists()) cb(snap.data())
+    if (snap.exists()) { cb(snap.data()); return }
+    // Doc is gone. Only act on a SERVER-confirmed deletion (not a cold cache
+    // miss while offline) — that means the account was reset, possibly on
+    // another device, and this device should mirror the wipe.
+    if (onGone && !snap.metadata.fromCache) onGone()
   })
 }

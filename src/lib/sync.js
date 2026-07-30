@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   firebaseEnabled, onAuth, signIn as fbSignIn, signOutUser,
-  fetchRemote, writeRemote, subscribeRemote,
+  fetchRemote, writeRemote, subscribeRemote, deleteRemote,
 } from './firebase.js'
-import { CURRENT_VERSION, hangsToObject } from './storage.js'
+import { CURRENT_VERSION, hangsToObject, defaultData } from './storage.js'
 
 // Only these fields sync. UI-only state stays local.
 function pick(d) {
@@ -62,6 +62,16 @@ export function canPush({ uid, hydratedUid }) {
   return !!uid && hydratedUid === uid
 }
 
+// Account reset — the one intentional path that bypasses the write guard.
+// Ordering is the safety property: the cloud document must be deleted and
+// CONFIRMED before local is cleared. If deleteRemote rejects, clearLocal is
+// never reached, so the user is never left with local wiped but cloud intact.
+// When signed out (no uid) there is no cloud copy — just clear local.
+export async function performReset({ uid, deleteRemote, clearLocal }) {
+  if (uid) await deleteRemote(uid)   // throws on failure -> local left untouched
+  clearLocal()
+}
+
 export function useCloudSync(data, setData) {
   const [user, setUser] = useState(null)
   const [status, setStatus] = useState(firebaseEnabled ? 'init' : 'disabled')
@@ -77,6 +87,24 @@ export function useCloudSync(data, setData) {
   const writeTimer = useRef(null)
   const dataRef = useRef(data)
   dataRef.current = data
+
+  // A live snapshot arrived: merge it into local per-key so unpushed local edits
+  // aren't wiped.
+  const applyRemote = useCallback((remoteData) => {
+    const next = mergeData(dataRef.current, remoteData)
+    if (JSON.stringify(pick(next)) === JSON.stringify(pick(dataRef.current))) return
+    applyingRemote.current = true
+    setData(() => next)
+  }, [setData])
+
+  // The cloud doc was deleted on the server = the account was reset (here or on
+  // another device). Mirror the wipe locally instead of re-uploading our copy —
+  // and flag it as a remote-driven change so the push effect doesn't recreate it.
+  const applyRemoteGone = useCallback(() => {
+    if (JSON.stringify(pick(dataRef.current)) === JSON.stringify(pick(defaultData()))) return
+    applyingRemote.current = true
+    setData(() => defaultData())
+  }, [setData])
 
   // auth state
   useEffect(() => {
@@ -120,13 +148,7 @@ export function useCloudSync(data, setData) {
         if (cancelled) return
         setStatus('synced'); setLastSyncedAt(Date.now())
         setHydrated(true)
-        unsubDoc.current = await subscribeRemote(user.uid, (remoteData) => {
-          // merge remote into local per-key so unpushed local edits aren't wiped
-          const next = mergeData(dataRef.current, remoteData)
-          if (JSON.stringify(pick(next)) === JSON.stringify(pick(dataRef.current))) return
-          applyingRemote.current = true
-          setData(() => next)
-        })
+        unsubDoc.current = await subscribeRemote(user.uid, applyRemote, applyRemoteGone)
       } catch {
         if (cancelled) return
         // Fetch failed. Don't strand the user on the loading screen, but keep the
@@ -140,7 +162,7 @@ export function useCloudSync(data, setData) {
       cancelled = true
       if (unsubDoc.current) { unsubDoc.current(); unsubDoc.current = null }
     }
-  }, [user, setData])
+  }, [user, setData, applyRemote, applyRemoteGone])
 
   // push local edits up (debounced); skip the change that came FROM remote
   useEffect(() => {
@@ -165,6 +187,29 @@ export function useCloudSync(data, setData) {
   }, [])
   const signOut = useCallback(async () => { await signOutUser() }, [])
 
+  // Erase the account and start over. Deletes the cloud doc FIRST and only then
+  // clears local; if the delete fails it rejects with local untouched so the
+  // caller can surface an error. This is the one path allowed past the guard.
+  const resetAccount = useCallback(async () => {
+    await performReset({
+      uid: user?.uid || null,
+      deleteRemote,
+      clearLocal: () => {
+        // Cloud is confirmed gone. Tear down the live sub, wipe local, and keep
+        // the push gate open for this uid so re-onboarding syncs to a fresh doc.
+        if (unsubDoc.current) { unsubDoc.current(); unsubDoc.current = null }
+        if (user) hydratedForUid.current = user.uid
+        applyingRemote.current = true            // the wipe below is not a user edit
+        setData(() => defaultData())
+        if (user) { setStatus('synced'); setLastSyncedAt(Date.now()) }
+        // Re-subscribe so re-onboarding and other devices stay in sync.
+        if (user) {
+          subscribeRemote(user.uid, applyRemote, applyRemoteGone).then((fn) => { unsubDoc.current = fn })
+        }
+      },
+    })
+  }, [user, setData, applyRemote, applyRemoteGone])
+
   const ready = isReady({ enabled: firebaseEnabled, authResolved, hydrated })
-  return { user, status, signIn, signOut, enabled: firebaseEnabled, ready, lastSyncedAt }
+  return { user, status, signIn, signOut, enabled: firebaseEnabled, ready, lastSyncedAt, resetAccount }
 }

@@ -73,7 +73,10 @@ export default function Settings({ data, update, sync, onClose }) {
   const [daysPerWeek, setDaysPerWeek] = useState(s.daysPerWeek)
   const [runningBase, setRunningBase] = useState(s.runningBase)
   const [importMsg, setImportMsg] = useState(null)
+  const [resetting, setResetting] = useState(false)
+  const [resetErr, setResetErr] = useState(null)
   const fileRef = useRef(null)
+  const cloudReset = !!(sync?.enabled && sync?.user)
 
   // Preserve the athlete's existing start anchor so tweaking settings mid-plan
   // re-lays the phases in place instead of restarting from today.
@@ -109,10 +112,24 @@ export default function Settings({ data, update, sync, onClose }) {
     update((d) => { d.settings.lastExportPrompt = new Date().toISOString(); return d })
   }
 
-  const resetAll = () => {
-    if (!confirm('Erase all your data on this device and start over? This cannot be undone. Export a backup first if you want to keep it.')) return
-    update((d) => { d.settings.onboarded = false; d.marks = {}; d.hangs = {}; return d })
-    onClose()
+  const resetAll = async () => {
+    const msg = cloudReset
+      ? 'Erase ALL your data for this account — on every device you\'re signed in on — and start over?\n\nThis permanently deletes your cloud backup too. It cannot be undone. Export a backup first if you want to keep it.'
+      : 'Erase all your data on this device and start over? This cannot be undone. Export a backup first if you want to keep it.'
+    if (!confirm(msg)) return
+    setResetErr(null)
+    setResetting(true)
+    try {
+      // Deletes the cloud doc first and only clears local once that is confirmed.
+      await sync.resetAccount()
+      onClose()
+    } catch {
+      // Cloud delete failed — local is deliberately left intact so the user is
+      // never stranded with local gone and the cloud still holding their data.
+      setResetErr('Couldn’t delete your cloud data, so nothing was erased. Check your connection and try again.')
+    } finally {
+      setResetting(false)
+    }
   }
 
   return (
@@ -204,9 +221,19 @@ export default function Settings({ data, update, sync, onClose }) {
           {/* danger */}
           <section className="mb-10">
             <p className="font-cond font-bold uppercase text-[.62rem] tracking-wider text-bone-dim mb-3">Start over</p>
-            <button onClick={resetAll} className="w-full py-3 rounded border border-alarm text-alarm font-cond font-bold uppercase tracking-wide">
-              Erase data & re-run onboarding
+            <p className="text-[.8rem] text-bone-dim mb-3">
+              {cloudReset
+                ? <>This permanently erases your plan, session marks, logs, and grip history — <b className="text-bone">including your cloud backup, on every device signed in to this account</b>. It cannot be undone.</>
+                : <>This erases your plan, session marks, logs, and grip history on this device. It cannot be undone.</>}
+            </p>
+            <button onClick={recordExport} className="w-full mb-2 py-3 rounded border border-lichen text-lichen font-cond font-bold uppercase tracking-wide">
+              Export backup first
             </button>
+            <button onClick={resetAll} disabled={resetting}
+              className="w-full py-3 rounded border border-alarm text-alarm font-cond font-bold uppercase tracking-wide disabled:opacity-40">
+              {resetting ? 'Erasing…' : (cloudReset ? 'Erase account (all devices) & start over' : 'Erase data & re-run onboarding')}
+            </button>
+            {resetErr && <p className="text-alarm text-sm mt-2">{resetErr}</p>}
           </section>
         </div>
       </div>
