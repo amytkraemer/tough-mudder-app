@@ -17,8 +17,9 @@ export function defaultData() {
       lastExportPrompt: null, // ISO date we last nudged for a backup
       createdAt: null,
     },
-    marks: {},                // "<week>:<run|strength|circuit>" -> done|backup|partial|missed
-    logs: {},                 // "<week>:<run|strength|circuit>" -> performance details
+    marks: {},                // "<week>:<session>" -> done|backup|partial|missed
+    logs: {},                 // "<week>:<session>" -> performance details
+    bonus: {},                // "<week>" -> [ { id, kind, n } ] extra sessions
     hangs: [],                // { id, date, seconds, grip, notes }
   }
 }
@@ -42,6 +43,7 @@ function migrate(data) {
     settings: { ...d.settings, ...(data.settings || {}) },
     marks: data.marks || {},
     logs: data.logs || {},
+    bonus: data.bonus || {},
     hangs: Array.isArray(data.hangs) ? data.hangs : [],
     version: CURRENT_VERSION,
   }

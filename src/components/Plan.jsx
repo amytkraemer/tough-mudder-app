@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { computeStats } from '../lib/stats.js'
 import { buildLogIndex, prevFor } from '../lib/metrics.js'
 import { markKey } from '../lib/storage.js'
+import BonusArea from './BonusArea.jsx'
 import { PHASES } from '../data/plan.js'
 import SessionCard, { StatusPill } from './SessionCard.jsx'
 
@@ -30,11 +31,11 @@ function SessionMini({ kind, mark }) {
   )
 }
 
-export default function Plan({ schedule, data, setMark, setLog }) {
+export default function Plan({ schedule, data, setMark, setLog, addBonus, removeBonus }) {
   const { weeks, currentIndex, daysToRace } = schedule
   const current = weeks[currentIndex]
   const stats = computeStats({ weeks, marks: data.marks })
-  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs), [weeks, data.logs])
+  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.bonus), [weeks, data.logs, data.bonus])
 
   const [openPhases, setOpenPhases] = useState(() => ({ [current.phaseId]: true }))
   const [openWeek, setOpenWeek] = useState(current.week)
@@ -145,6 +146,16 @@ export default function Plan({ schedule, data, setMark, setLog }) {
                                 prev={prevFor(logIndex, w.week, s, w)}
                               />
                             ))}
+                            <BonusArea
+                              week={w}
+                              data={data}
+                              logIndex={logIndex}
+                              setMark={setMark}
+                              setLog={setLog}
+                              addBonus={addBonus}
+                              removeBonus={removeBonus}
+                              daysPerWeek={data.settings.daysPerWeek}
+                            />
                           </div>
                         )}
                       </div>

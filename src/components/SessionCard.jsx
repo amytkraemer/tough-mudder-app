@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { BACKUP } from '../data/plan.js'
 import { logHasData, logSummary, anyModified, shortName } from '../lib/metrics.js'
 import { modificationFor } from '../data/modifications.js'
+import { parseRun } from '../lib/runIntervals.js'
 import SessionLog from './SessionLog.jsx'
+import RunTimer from './RunTimer.jsx'
 
 const SPINE = { run: 'var(--lichen)', strength: 'var(--blaze)', circuit: 'var(--clay)' }
 const DAYMETA = {
@@ -34,14 +36,17 @@ export function StatusPill({ mark }) {
   )
 }
 
-export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev }) {
+export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev, label, titleOverride, onRemove, onGuided }) {
   const [showBackup, setShowBackup] = useState(false)
   const [showLog, setShowLog] = useState(false)
   const [showMods, setShowMods] = useState(false)
+  const [timer, setTimer] = useState(false)
   const meta = DAYMETA[kind]
   const isRun = kind === 'run'
   const content = isRun ? null : week[kind]
   const hasLog = logHasData(log)
+  const runText = isRun ? (titleOverride || week.run) : ''
+  const guided = isRun ? parseRun(runText) : null
   const modList = isRun ? [] : content.exercises
     .map((ex, i) => ({ i, ex, tip: modificationFor(ex) }))
     .filter((x) => x.tip)
@@ -54,20 +59,36 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-cond font-bold uppercase tracking-[.12em] text-[.62rem] text-bone-dim">
-            {meta.day} · {meta.type}
+            {label || `${meta.day} · ${meta.type}`}
           </p>
           <h3 className="font-bold text-[1.12rem] leading-tight mt-0.5">
-            {isRun ? week.run : content.label}
+            {isRun ? (titleOverride || week.run) : content.label}
           </h3>
           {!isRun && <p className="text-sm text-bone-dim mt-0.5">{content.scheme}</p>}
         </div>
-        <StatusPill mark={mark} />
+        <div className="flex items-center gap-2 flex-none">
+          <StatusPill mark={mark} />
+          {onRemove && (
+            <button onClick={onRemove} aria-label="Remove session" className="text-bone-dim px-1 no-tap-highlight text-lg leading-none">✕</button>
+          )}
+        </div>
       </div>
 
       {isRun ? (
         <div className="mt-3 text-sm text-bone-dim">
           <p>{meta.where}</p>
           <p className="mt-1">5 min brisk walk to warm up and cool down. Pace: able to talk in full sentences.</p>
+          {guided ? (
+            <button
+              onClick={() => setTimer(true)}
+              className="mt-3 w-full flex items-center justify-center gap-2 rounded border border-lichen text-lichen font-cond font-bold uppercase text-[.72rem] tracking-wide py-2.5 no-tap-highlight"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l12 7-12 7z" /></svg>
+              Guided intervals
+            </button>
+          ) : (
+            <p className="mt-2 text-[.78rem] text-bone-dim italic">Free run — go by feel, then log your time and distance.</p>
+          )}
         </div>
       ) : (
         <>
@@ -187,6 +208,15 @@ export default function SessionCard({ kind, week, mark, onMark, log, onLog, prev
           )
         })}
       </div>
+
+      {timer && guided && (
+        <RunTimer
+          title={runText}
+          intervals={guided.intervals}
+          onClose={() => setTimer(false)}
+          onDone={(min) => { onLog({ min: String(min) }); if (!mark) onMark('done'); setTimer(false) }}
+        />
+      )}
     </article>
   )
 }

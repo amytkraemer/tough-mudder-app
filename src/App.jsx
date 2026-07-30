@@ -54,6 +54,25 @@ export default function App() {
     })
   }, [update])
 
+  const addBonus = useCallback((week, kind) => {
+    update((d) => {
+      const list = d.bonus[week] || []
+      const n = list.reduce((m, b) => Math.max(m, b.n || 0), 0) + 1
+      d.bonus[week] = [...list, { id: `bonus-${kind}-${n}`, kind, n }]
+      return d
+    })
+  }, [update])
+
+  const removeBonus = useCallback((week, id) => {
+    update((d) => {
+      d.bonus[week] = (d.bonus[week] || []).filter((b) => b.id !== id)
+      if (!d.bonus[week].length) delete d.bonus[week]
+      delete d.marks[`${week}:${id}`]
+      delete d.logs[`${week}:${id}`]
+      return d
+    })
+  }, [update])
+
   const setLog = useCallback((week, session, patch) => {
     update((d) => {
       const key = `${week}:${session}`
@@ -89,11 +108,13 @@ export default function App() {
             data={data}
             setMark={setMark}
             setLog={setLog}
+            addBonus={addBonus}
+            removeBonus={removeBonus}
             onOpenSettings={() => setShowSettings(true)}
             onGoPlan={() => setTab('plan')}
           />
         )}
-        {tab === 'plan' && <Plan schedule={schedule} data={data} setMark={setMark} setLog={setLog} />}
+        {tab === 'plan' && <Plan schedule={schedule} data={data} setMark={setMark} setLog={setLog} addBonus={addBonus} removeBonus={removeBonus} />}
         {tab === 'exercises' && <Exercises data={data} update={update} />}
         {tab === 'grip' && <Grip data={data} update={update} />}
         {tab === 'progress' && <Progress schedule={schedule} data={data} />}

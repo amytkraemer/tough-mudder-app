@@ -3,6 +3,7 @@ import { markKey } from '../lib/storage.js'
 import { dayPlan } from '../lib/schedule.js'
 import { buildLogIndex, prevFor } from '../lib/metrics.js'
 import SessionCard from './SessionCard.jsx'
+import BonusArea from './BonusArea.jsx'
 
 const HATCH = {
   backgroundImage:
@@ -10,12 +11,12 @@ const HATCH = {
 }
 const PHASE_ACCENT = { 1: 'var(--lichen)', 2: 'var(--blaze)', 3: 'var(--clay)', 4: 'var(--alarm)' }
 
-export default function Today({ schedule, data, setMark, setLog, onOpenSettings, onGoPlan }) {
+export default function Today({ schedule, data, setMark, setLog, addBonus, removeBonus, onOpenSettings, onGoPlan }) {
   const { weeks, currentIndex, status, daysToRace } = schedule
   const week = weeks[currentIndex]
   const marks = data.marks
   const plan = dayPlan(data.settings.daysPerWeek)
-  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs), [weeks, data.logs])
+  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.bonus), [weeks, data.logs, data.bonus])
 
   const doneThisWeek = ['run', 'strength', 'circuit'].filter((s) => {
     const m = marks[markKey(week.week, s)]
@@ -108,6 +109,17 @@ export default function Today({ schedule, data, setMark, setLog, onOpenSettings,
             prev={prevFor(logIndex, week.week, s, week)}
           />
         ))}
+
+        <BonusArea
+          week={week}
+          data={data}
+          logIndex={logIndex}
+          setMark={setMark}
+          setLog={setLog}
+          addBonus={addBonus}
+          removeBonus={removeBonus}
+          daysPerWeek={data.settings.daysPerWeek}
+        />
 
         <p className="text-[.8rem] text-bone-dim mt-4 leading-relaxed">
           <b className="text-bone">Never skip Day 2.</b> If a week falls apart from travel, the strength day is the one that matters most. And dead hang every day you can.

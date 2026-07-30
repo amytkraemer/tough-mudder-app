@@ -48,20 +48,27 @@ export function anyModified(log) {
 
 // ---- previous-value lookup (for placeholders) + progress series ----
 // Index every logged value by movement/kind so we can find "last time".
-export function buildLogIndex(weeks, logs) {
+export function buildLogIndex(weeks, logs, bonus = {}) {
   const map = { run: [], circuit: [] } // map['str|<movement>'] = [{week,n,w}]
   const push = (k, v) => { (map[k] ||= []).push(v) }
-  for (const w of weeks) {
-    const rl = logs[`${w.week}:run`]
-    if (rl && (rl.min || rl.mi)) push('run', { week: w.week, min: rl.min, mi: rl.mi })
-    const cl = logs[`${w.week}:circuit`]
-    if (cl && cl.rounds) push('circuit', { week: w.week, rounds: cl.rounds })
-    const sl = logs[`${w.week}:strength`]
-    if (sl && sl.ex && w.strength?.exercises) {
-      w.strength.exercises.forEach((ex, i) => {
-        const e = sl.ex[i]
-        if (e && (e.n || e.w)) push('str|' + shortName(ex).toLowerCase(), { week: w.week, n: e.n, w: e.w })
+  const ingest = (weekNum, kind, log, exercises) => {
+    if (!log) return
+    if (kind === 'run' && (log.min || log.mi)) push('run', { week: weekNum, min: log.min, mi: log.mi })
+    else if (kind === 'circuit' && log.rounds) push('circuit', { week: weekNum, rounds: log.rounds })
+    else if (kind === 'strength' && log.ex && exercises) {
+      exercises.forEach((ex, i) => {
+        const e = log.ex[i]
+        if (e && (e.n || e.w)) push('str|' + shortName(ex).toLowerCase(), { week: weekNum, n: e.n, w: e.w })
       })
+    }
+  }
+  for (const w of weeks) {
+    ingest(w.week, 'run', logs[`${w.week}:run`])
+    ingest(w.week, 'circuit', logs[`${w.week}:circuit`])
+    ingest(w.week, 'strength', logs[`${w.week}:strength`], w.strength?.exercises)
+    for (const b of bonus[w.week] || []) {
+      const ex = b.kind === 'strength' ? w.strength?.exercises : undefined
+      ingest(w.week, b.kind, logs[`${w.week}:${b.id}`], ex)
     }
   }
   return map

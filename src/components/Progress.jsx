@@ -24,7 +24,7 @@ export default function Progress({ schedule, data }) {
   const { weeks, currentIndex, daysToRace } = schedule
   const stats = computeStats({ weeks, marks: data.marks })
   const hs = hangStats(data.hangs)
-  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs), [weeks, data.logs])
+  const logIndex = useMemo(() => buildLogIndex(weeks, data.logs, data.bonus), [weeks, data.logs, data.bonus])
   const movements = useMemo(() => loggedMovements(logIndex), [logIndex])
   const streak = currentStreak(weeks, data.marks, currentIndex)
   const scaling = useMemo(() => stillModifying(weeks, data.logs), [weeks, data.logs])
