@@ -1,7 +1,8 @@
-# Tough Mudder 5K Training App — Full Recap for Review (v2)
+# Tough Mudder 5K Training App — Full Recap for Review (v3)
 
 Updated after a three-part overhaul (stabilization → multi-day/library/scaling
-→ design). Hand this to a reviewer to audit the work.
+→ design) and a correctness/data-safety hardening pass (§11). Hand this to a
+reviewer to audit the work.
 
 ## 1. What it is
 An installable, offline-capable PWA that combines a 47-week Tough Mudder 5K
@@ -58,32 +59,43 @@ localStorage key `tm.data.v1` (same shape as the Firestore doc `users/{uid}`):
   marks{ "<week>:<session>": done|backup|partial|missed },
   logs{  "<week>:<session>": {min,mi}|{rounds}|{ex:{<i>:{n,w,mod}}}, notes },
   extra{ "<week>": [{id,kind,n,preset?}] },
-  hangs[ {id,date,seconds,grip,notes} ] }
+  hangs{ "<id>": {id,date,seconds,grip,notes} },
+  clock{ marks,logs,hangs,extra: {"<key>": ms} },       // per-item last-write time
+  tombstones{ marks,logs,hangs,extra: {"<key>": ms} } } // per-item deletion time
 ```
 `<session>` = `run|strength|circuit` (core), `overlay-grip|overlay-run2|
 overlay-mobility` (overlay days, derived per week), or an extra id. Overlay days
 are **derived** from days-per-week + running base (attached as `week.overlays`),
-not stored. A migration moves the former `bonus` key to `extra` with no data loss.
-Sync is doc-level last-write-wins; first sign-in unions local + remote.
+not stored. `hangs` is an id-keyed **object** (was an array); `extra` clock/
+tombstone keys are composite `"<week>:<id>"`. Migrations move the former `bonus`
+key to `extra` and the `hangs` array to an object, both idempotent and lossless.
+Sync is **per-item last-write-wins with tombstones** (see §11.9), not doc-level.
 
-## 5. Security — verified live, not just documented
+## 5. Security — verified live AND in CI
 Firestore rules: `allow read, write: if request.auth != null &&
-request.auth.uid == uid`. Probed the live database unauthenticated: **read and
-write both return 403 PERMISSION_DENIED on `users/*` and every other path** —
-default-deny, not open test mode. Accounts are isolated; friends' data can't be
-read or written by anyone else. The Firebase web config in the repo is not a
+request.auth.uid == uid`. Two layers of proof: (a) probed the live database
+unauthenticated — read/write both return 403 PERMISSION_DENIED everywhere; and
+(b) a **Firebase-emulator test signs in as a real authenticated user and is
+denied read AND write on another user's document** (`npm run test:rules`). So
+isolation is enforced against *authenticated* cross-account access, not just
+anonymous — and it runs in CI. The Firebase web config in the repo is not a
 secret (protection is the rules).
 
-## 6. Tests (Vitest) — 51 passing
-Run with `npm test` (executes under `TZ=America/Los_Angeles` so any regression
-to local-time date math fails). Files: `test/schedule`, `metrics`, `runScaling`,
-`runIntervals`, `overlays`. Coverage includes: default 47-week/10-14-14-9 plan
-and week 47 = race week; all four running-base skips landing on race week;
-Phase 1 never < 4 weeks; compression protecting Phase 1 + 2 taper weeks; extra
-runway extending Phase 2; **timezone invariance** (UTC-derived week); run scaling
-verification cases (4mi→6mi, 8×45→10×45, 35min→50min) and protected sessions;
-run-interval parsing incl. the incline segment; overlay gate + core-invariance +
-grip taper; **completion rate ≤ 100%** with overlays and extras marked.
+## 6. Tests (Vitest) — 91 unit + 7 rules passing
+`npm test` runs the unit suite under `TZ=America/Los_Angeles` (so any regression
+to local-time date math fails); `npm run test:rules` runs the Firestore-rules
+tests against the emulator; `npm run test:ci` runs both. Unit coverage includes:
+the default 47-week/10-14-14-9 plan and week 47 = race week; all four
+running-base skips landing on race week; Phase 1 never < 4 weeks; compression
+protecting Phase 1 + 2 taper weeks; extra runway extending Phase 2; **timezone
+invariance**; **run-scaling coverage** (every prescription string must match a
+scaling pattern or be on the do-not-scale list — a new unscaled run fails the
+build); overlay gate + core-invariance + grip taper; **core vs plan completion**
+per days-per-week (both ≤ 100%); the **cloud-load ordering + write guard**;
+**account reset** (delete-before-clear, failed-delete keeps local); and
+**deletion tracking** (LWW both directions, import-omission, TTL cleanup).
+Emulator tests run serially (shared Firestore) and cover isolation, real
+doc-delete on reset, and nested-`deleteField` tombstone GC.
 
 ## 7. Key modules
 - `lib/schedule.js` — plan generation, UTC day-number date math, overlay attach,
@@ -108,9 +120,11 @@ vertical course map, dog-tag session cards. `prefers-reduced-motion` makes the
 stamp instant and stops the pulse.
 
 ## 9. Known limitations / review these
-1. **Sync is doc-level last-write-wins.** Two devices editing the same week
-   offline then reconnecting can clobber each other. Fine for one person;
-   consider field-level merges if that changes.
+1. **Sync is per-item last-write-wins with tombstones** (§11.9). Two devices
+   editing *different* items both survive; a same-item conflict resolves to the
+   newer write (accepted trade-off). Deletions propagate. A fresh device that
+   imports a backup *before* signing in unions with the cloud rather than
+   replacing it (import replaces relative to current local state).
 2. **Overlay days + extras are excluded from the completion denominator**
    (intentional, keeps the rate ≤ 100% and comparable across users). A reviewer
    may want overlay completion surfaced somewhere.
@@ -136,4 +150,54 @@ Base PWA → Firebase sync (dormant → enabled) → Strength A per-week reps �
 performance logging → easier-options/modified → placeholders + Progress tab →
 extra sessions/day nudge/guided runs → **Part 1** stabilization (tests,
 timezone, RunTimer, extra rename, precache) → **Part 2** overlays/library/scaling
-→ **Part 3** design overhaul → guided-timer portal fix. Deploys from `main`.
+→ **Part 3** design overhaul → guided-timer portal fix → **v3 hardening** (§11).
+Deploys from `main`.
+
+## 11. Correctness & data-safety hardening (v3)
+No new features — a stabilization pass driven by real-world use. All shipped,
+tested, and live.
+
+**Round 1 — six correctness fixes**
+1. **Account isolation verified for real** — emulator test proves an
+   authenticated user can't read/write another user's doc (see §5).
+2. **Completion math for multi-day plans** — split into **Core completion**
+   (fixed 3-day spine, denominator always 141) and **Plan completion** (scales
+   with days/week, includes overlays). A 6-day user can no longer skip overlays
+   and show 100%. Extras still counted separately; neither rate exceeds 100%.
+3. **Run scaling fails loudly** — a coverage test asserts every prescription
+   string matches a scaling pattern or is on the explicit do-not-scale list.
+4. **Two devices can't wipe each other** — moved off whole-document overwrite to
+   per-item merge; `hangs` array → id-keyed object (superseded by §11.9's LWW).
+5. **Import survives `bonus`→`extra`** — old exports and old-shape cloud docs
+   migrate losslessly; migration writes back so it runs once, not every load.
+6. **clip-path/`position:fixed` gotcha documented** in CLAUDE.md; audit found
+   RunTimer the only affected element and it already portals to `<body>`.
+
+**Round 2 — four bugs found in use**
+7. **Returning user saw onboarding + blank progress on a new device.** The app
+   decided onboarding from empty local storage *before* the cloud doc loaded.
+   Fixed the ordering (wait for auth + cloud, show a loader, never onboard over
+   cloud data) and added a **write guard**: an empty/fresh local state can never
+   overwrite a populated cloud doc. Settings now shows sync status + last-synced.
+8. **Reset didn't stick — cloud restored everything.** Reset only cleared local.
+   Now it **deletes the Firestore document** and confirms that *before* clearing
+   local (a failed delete leaves local intact and surfaces an error); a second
+   device mirrors the wipe. UI warns it erases cloud data on all devices and
+   offers export-first.
+9. **Deletions didn't sync (LWW + tombstones).** Un-checking a mark, removing an
+   extra, or deleting a hang was re-added on the next sync. Now every item has a
+   timestamp (`clock`) and every deletion a `tombstone`; merge picks the most
+   recent of {edit, delete} per item — newer delete beats older edit, newer edit
+   beats older delete. Legacy items backfill to a floor timestamp (no data loss).
+   Tombstones GC after 90 days (local prune + nested `deleteField` in the cloud).
+   Import replaces under LWW: entries a backup omits are tombstoned so the cloud
+   can't silently re-add them. Core in `lib/lww.js` (pure, unit-tested).
+10. **Sign-in failed in the installed PWA.** Standalone used `signInWithRedirect`,
+    which iOS drops (app origin ≠ Firebase authDomain → Safari storage
+    partitioning → empty `getRedirectResult`), looping back to onboarding.
+    Switched to **popup-first everywhere** (Firebase's recommended flow for
+    storage-partitioning browsers), redirect only as fallback. Confirmed working.
+
+**No data was lost** in any reported issue — the returning-user and reset bugs
+were about display/ordering and deletion propagation, not destruction of stored
+data. Account isolation was independently verified.
