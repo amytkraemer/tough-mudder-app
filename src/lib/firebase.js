@@ -41,16 +41,20 @@ export async function signIn() {
   const fb = await ensure()
   if (!fb) throw new Error('Sync is not configured')
   const { signInWithPopup, signInWithRedirect } = await import('firebase/auth')
-  // Popups are blocked in installed/standalone PWAs and many mobile browsers;
-  // fall back to redirect there.
-  const standalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone
-  if (standalone) return signInWithRedirect(fb.auth, fb.provider)
+  // Try popup FIRST everywhere — including installed/standalone PWAs. The
+  // redirect flow (signInWithRedirect) silently fails on iOS installed PWAs:
+  // the app is served from a different origin than the Firebase authDomain, and
+  // Safari partitions storage, so getRedirectResult comes back empty and the
+  // sign-in never lands. Popup keeps the auth on one page, which is Firebase's
+  // recommended flow for storage-partitioning browsers. Redirect stays only as a
+  // fallback for environments that genuinely can't open a popup.
   try {
     return await signInWithPopup(fb.auth, fb.provider)
   } catch (e) {
-    if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/cancelled-popup-request'].includes(e?.code)) {
+    if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment'].includes(e?.code)) {
       return signInWithRedirect(fb.auth, fb.provider)
     }
+    // popup-closed / cancelled-by-user etc. are real user actions — surface them.
     throw e
   }
 }

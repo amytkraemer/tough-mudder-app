@@ -106,7 +106,10 @@ export default function App() {
   // Never decide onboarding from local storage before cloud has loaded — a
   // returning user's plan and progress live in Firestore, not in a fresh
   // browser's empty localStorage. Show a loading state, never onboarding.
-  if (!booted) {
+  // Also cover the moment right AFTER sign-in (e.g. "Sign in to restore" from
+  // onboarding): a user is present but their cloud doc hasn't merged yet, so
+  // hold the loader instead of flashing onboarding back at them.
+  if (!booted || (sync.user && !sync.ready)) {
     return (
       <div className="min-h-screen bg-bog text-bone flex flex-col items-center justify-center gap-4">
         <div className="grain" aria-hidden="true" />
